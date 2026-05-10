@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="180" height="180" role="img" aria-label="MoneroUSD IDE">
+  <!--
+    180x180 Apple touch icon source. Build pipeline rasterises to PNG via
+    `rsvg-convert -w 180 apple-touch-icon.svg -o apple-touch-icon.png`.
+    Background is opaque (iOS rejects transparent PNGs for touch icons).
+  -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#1a1a1a" />
+      <stop offset="100%" stop-color="#0d0d0d" />
+    </linearGradient>
+    <linearGradient id="hex" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#FF8833" />
+      <stop offset="55%" stop-color="#FF6600" />
+      <stop offset="100%" stop-color="#E65800" />
+    </linearGradient>
+  </defs>
+
+  <rect width="180" height="180" rx="36" ry="36" fill="url(#bg)" />
+
+  <g transform="translate(28,28)">
+    <polygon points="62,2 118,33 118,90 62,121 6,90 6,33" fill="url(#hex)" />
+
+    <g fill="#fff" fill-rule="evenodd">
+      <rect x="26" y="38" width="9" height="46" rx="1.2" />
+      <polygon points="38,38 47,38 55,72 46,72" />
+      <polygon points="78,38 87,38 79,72 70,72" />
+      <rect x="89" y="38" width="9" height="46" rx="1.2" />
+      <circle cx="62" cy="74" r="4.6" />
+    </g>
+  </g>
+</svg>

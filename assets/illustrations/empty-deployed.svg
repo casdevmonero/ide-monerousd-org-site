@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" fill="none" stroke="#FF6600" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Nothing deployed illustration">
+  <!-- Cloud + arrow up + chain link, signaling "ready to deploy". -->
+  <!-- Cloud -->
+  <path d="M52 110a22 22 0 0 1 18-32 26 26 0 0 1 49 6 18 18 0 0 1 5 35H62a18 18 0 0 1-10-9z" />
+  <!-- Up-arrow shaft -->
+  <path d="M100 150v-26" />
+  <!-- Up-arrow head -->
+  <path d="M88 134l12-12 12 12" />
+  <!-- Chain links below -->
+  <g opacity="0.65" stroke-dasharray="0">
+    <rect x="74" y="158" width="22" height="14" rx="6" />
+    <rect x="104" y="158" width="22" height="14" rx="6" />
+    <path d="M96 165h8" />
+  </g>
+  <!-- Stars -->
+  <g opacity="0.45">
+    <path d="M30 60l4 4-4 4-4-4z" />
+    <path d="M170 80l4 4-4 4-4-4z" />
+    <path d="M40 130l3 3-3 3-3-3z" />
+  </g>
+</svg>

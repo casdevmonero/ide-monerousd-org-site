@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" role="img" aria-label="MoneroUSD IDE">
+  <!--
+    1200x630 social-unfurl banner. Build pipeline rasterises to PNG via
+    `rsvg-convert -w 1200 og-card.svg -o og-card.png`. Used by Twitter /
+    Slack / Discord / Open Graph consumers.
+  -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"  stop-color="#0d0d0d" />
+      <stop offset="55%" stop-color="#141414" />
+      <stop offset="100%" stop-color="#1a1a1a" />
+    </linearGradient>
+    <radialGradient id="glow" cx="0.18" cy="0.45" r="0.55">
+      <stop offset="0%"  stop-color="#FF6600" stop-opacity="0.18" />
+      <stop offset="60%" stop-color="#FF6600" stop-opacity="0.04" />
+      <stop offset="100%" stop-color="#FF6600" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="hex" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#FF8833" />
+      <stop offset="55%" stop-color="#FF6600" />
+      <stop offset="100%" stop-color="#E65800" />
+    </linearGradient>
+    <pattern id="dots" width="22" height="22" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1" fill="#262626" />
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)" />
+  <rect width="1200" height="630" fill="url(#dots)" />
+  <rect width="1200" height="630" fill="url(#glow)" />
+
+  <!-- Top accent rail. -->
+  <rect x="0" y="0" width="1200" height="3" fill="#FF6600" />
+
+  <!-- Logo block (left). -->
+  <g transform="translate(96,205)">
+    <polygon points="100,0 196,55 196,165 100,220 4,165 4,55" fill="url(#hex)" />
+    <polygon points="100,12 184,60 184,160 100,208 16,160 16,60" fill="none" stroke="#000" stroke-opacity="0.18" stroke-width="1.2" />
+    <g fill="#fff" fill-rule="evenodd">
+      <rect x="40" y="62" width="16" height="86" rx="2" />
+      <polygon points="62,62 78,62 92,127 76,127" />
+      <polygon points="124,62 140,62 126,127 110,127" />
+      <rect x="146" y="62" width="16" height="86" rx="2" />
+      <circle cx="100" cy="130" r="8.5" />
+    </g>
+  </g>
+
+  <!-- Type block (right). -->
+  <g transform="translate(360,200)" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" fill="#f5f5f5">
+    <text x="0" y="40" font-size="28" font-weight="500" fill="#FF8833" letter-spacing="6">MONEROUSD</text>
+    <text x="0" y="130" font-size="92" font-weight="800" letter-spacing="-2">IDE</text>
+    <text x="0" y="195" font-size="32" font-weight="500" fill="#cfcfcf">
+      Build dark contracts. Publish sovereign sites.
+    </text>
+    <text x="0" y="240" font-size="32" font-weight="500" fill="#FF8833">
+      Strengthen the peg.
+    </text>
+
+    <!-- URL pill. -->
+    <g transform="translate(0,290)">
+      <rect x="0" y="0" width="370" height="48" rx="24" fill="#FF6600" />
+      <text x="185" y="32" font-size="20" font-weight="600" fill="#0d0d0d" text-anchor="middle"
+            font-family="ui-monospace, 'JetBrains Mono', 'SF Mono', monospace">
+        ide.monerousd.org
+      </text>
+    </g>
+  </g>
+
+  <!-- Footer mark. -->
+  <g transform="translate(96,560)" font-family="ui-monospace, 'JetBrains Mono', monospace" fill="#6a6a6a">
+    <text x="0" y="0" font-size="14">SITE_PUBLISH 0x27 · DC_DEPLOY 0x21 · DC_CALL 0x22 · DC_CALL_REVEAL 0x23</text>
+  </g>
+  <g transform="translate(1104,560)" font-family="ui-monospace, 'JetBrains Mono', monospace" fill="#6a6a6a" text-anchor="end">
+    <text x="0" y="0" font-size="14">v1.2.181 · sovereign-anchored</text>
+  </g>
+</svg>

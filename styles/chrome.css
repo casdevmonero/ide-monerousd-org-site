@@ -1,0 +1,722 @@
+/* Chrome — top bar / activity bar / side panel / status bar.
+ *
+ * v1.2.182 redesign goals:
+ *   1. Visual family with Ion Swap. Same orange, same deep blacks, same
+ *      pill shapes, same gradient accents. Open both side-by-side and the
+ *      kinship is immediate.
+ *   2. Activity-bar polish at Remix-class quality. Each item is a real
+ *      target with hover / active / focus states and an animated orange
+ *      gradient rail when active.
+ *   3. Mobile-ready. Below 768 px the activity bar collapses into a
+ *      bottom tab bar, panels stack vertically, and every interactive
+ *      element meets the 44 × 44 touch target.
+ *   4. Glassmorphic top bar — backdrop-blur + subtle dark wash so the
+ *      ambient orange halo from tokens.css softly shines through.
+ *
+ * The layout is CSS Grid on `#app`. Three layouts:
+ *   ≥ 1025 px : full desktop (activity, side, editor, plugin)
+ *    769-1024 : tablet (activity, side, editor — plugin auto-hides)
+ *   ≤ 768 px  : mobile (bottom tabs, single-column body, terminal/panel
+ *               become full-screen overlays). Side panel is summoned
+ *               via the activity-bar tabs and slides in from below.
+ */
+
+/* ─── Desktop layout ─────────────────────────────────────────────────── */
+
+#app {
+  display: grid;
+  grid-template-rows: 52px 1fr 28px;
+  grid-template-columns: 56px 280px 1fr 360px;
+  grid-template-areas:
+    "topbar    topbar    topbar    topbar"
+    "activity  side      editor    plugin"
+    "statusbar statusbar statusbar statusbar";
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#app[data-side-collapsed="true"] {
+  grid-template-columns: 56px 0 1fr 360px;
+}
+#app[data-plugin-collapsed="true"] {
+  grid-template-columns: 56px 280px 1fr 0;
+}
+#app[data-side-collapsed="true"][data-plugin-collapsed="true"] {
+  grid-template-columns: 56px 0 1fr 0;
+}
+
+#app[data-terminal-open="true"] {
+  grid-template-rows: 52px 1fr 200px 28px;
+  grid-template-areas:
+    "topbar    topbar    topbar    topbar"
+    "activity  side      editor    plugin"
+    "activity  side      terminal  plugin"
+    "statusbar statusbar statusbar statusbar";
+}
+
+@media (max-width: 1024px) {
+  #app {
+    grid-template-columns: 56px 280px 1fr 0;
+  }
+  #app[data-terminal-open="true"] {
+    grid-template-columns: 56px 280px 1fr 0;
+  }
+  /* Plugin panel auto-hides on tablet; cards inside it move into the
+   * editor's empty state or the terminal's tabs. */
+  .plugin { display: none !important; }
+}
+
+/* ─── Top bar ────────────────────────────────────────────────────────── */
+
+.topbar {
+  grid-area: topbar;
+  position: relative;
+  background: rgba(10, 10, 10, 0.65);
+  backdrop-filter: saturate(1.4) blur(16px);
+  -webkit-backdrop-filter: saturate(1.4) blur(16px);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 14px;
+  -webkit-app-region: drag;
+  z-index: 10;
+}
+.topbar > * { -webkit-app-region: no-drag; }
+
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  transition: filter var(--t-fast) var(--ease-out);
+}
+.topbar-brand img {
+  width: 24px;
+  height: 24px;
+  display: block;
+  filter: drop-shadow(0 0 14px rgba(255, 102, 0, 0.55));
+  transition: filter var(--t-base) var(--ease-out);
+}
+.topbar-brand:hover img {
+  filter: drop-shadow(0 0 18px rgba(255, 122, 31, 0.75));
+}
+.topbar-brand .brand-mark {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.topbar-project {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+}
+.topbar-project input {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  padding: 6px 14px;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  min-width: 200px;
+  text-align: center;
+  transition: background var(--t-fast) var(--ease-out),
+              border-color var(--t-fast) var(--ease-out);
+}
+.topbar-project input:hover {
+  background: var(--bg-elevated);
+}
+.topbar-project input:focus {
+  background: var(--bg-elevated);
+  border-color: var(--border-strong);
+  outline: none;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.network-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--accent-soft);
+  color: var(--accent-hover);
+  border: 1px solid var(--accent-border);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  letter-spacing: 0.02em;
+}
+.network-pill::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+  animation: pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; transform: scale(0.9); }
+  50%      { opacity: 1;   transform: scale(1.15); }
+}
+
+.btn-connect {
+  background: linear-gradient(180deg, var(--accent-hover), var(--accent));
+  color: var(--text-inverse);
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: var(--shadow-glow);
+  transition: filter var(--t-fast) var(--ease-out),
+              transform var(--t-fast) var(--ease-out);
+}
+.btn-connect:hover  { filter: brightness(1.06); }
+.btn-connect:active { transform: translateY(1px); filter: brightness(0.95); }
+
+.btn-connect.connected {
+  background: var(--bg-popover);
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+  box-shadow: none;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.btn-connect.connected:hover {
+  border-color: var(--accent-border);
+  background: var(--bg-elevated);
+  filter: none;
+}
+.btn-connect.connected::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 8px var(--success);
+}
+
+/* ─── Activity bar ───────────────────────────────────────────────────────
+ *
+ * Each item is a 44 × 44 hit target rendered as a 36 × 36 pill. Active
+ * pill carries an orange-gradient fill + glow; the hit target stays
+ * 44 × 44 even on desktop so touch on Mac trackpads or iPads behaves
+ * the same as click. */
+
+.activity {
+  grid-area: activity;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0;
+  gap: 4px;
+  position: relative;
+  overflow: visible;
+}
+
+.activity-btn {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  background: transparent;
+  border-radius: var(--radius-md);
+  transition: color var(--t-base) var(--ease-out),
+              background var(--t-fast) var(--ease-out),
+              transform var(--t-fast) var(--ease-out);
+}
+.activity-btn::after {
+  /* the visible pill is inset 4px so the hit target stays 44×44 */
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: var(--radius-md);
+  background: transparent;
+  border: 1px solid transparent;
+  transition: background var(--t-fast) var(--ease-out),
+              border-color var(--t-fast) var(--ease-out),
+              box-shadow var(--t-base) var(--ease-out);
+  z-index: 0;
+}
+.activity-btn svg,
+.activity-btn .activity-tooltip {
+  position: relative;
+  z-index: 1;
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+.activity-btn:hover {
+  color: var(--text-primary);
+}
+.activity-btn:hover::after {
+  background: var(--bg-elevated);
+}
+.activity-btn.active {
+  color: var(--text-primary);
+}
+.activity-btn.active::after {
+  background: linear-gradient(180deg, var(--accent-tint), var(--accent-soft));
+  border-color: var(--accent-border);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset,
+              0 6px 18px rgba(255, 102, 0, 0.20);
+}
+/* Animated rail to the LEFT of an active pill — Remix-style accent.
+ * Nudged into the activity-bar gutter so it reads as a tab indicator. */
+.activity-btn.active::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: 11px;
+  bottom: 11px;
+  width: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
+  animation: rail-in 200ms var(--ease-out);
+  z-index: 2;
+}
+@keyframes rail-in {
+  from { transform: scaleY(0.3); opacity: 0; }
+  to   { transform: scaleY(1);   opacity: 1; }
+}
+
+.activity-divider {
+  width: 24px;
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 6px 0;
+}
+
+.activity-tooltip {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%) translateX(-4px);
+  background: var(--bg-popover);
+  color: var(--text-primary);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: var(--shadow-elev-1);
+  transition: opacity var(--t-fast) var(--ease-out) 50ms,
+              transform var(--t-fast) var(--ease-out) 50ms;
+  z-index: 100;
+  width: auto;
+  height: auto;
+}
+.activity-btn:hover .activity-tooltip {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+
+/* ─── Side panel ─────────────────────────────────────────────────────────
+ *
+ * Card-aesthetic header with a soft gradient base. Content area gets
+ * the same scrollbar treatment as the rest of the app. */
+
+.side {
+  grid-area: side;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border-subtle);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: width var(--t-slow) var(--ease-in-out);
+}
+
+.side-header {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid var(--border-subtle);
+  background: linear-gradient(180deg,
+    rgba(255, 255, 255, 0.02),
+    transparent);
+}
+.side-header-actions {
+  display: inline-flex;
+  gap: 2px;
+}
+.side-header-actions button {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  background: transparent;
+  border-radius: var(--radius-sm);
+  transition: color var(--t-fast) var(--ease-out),
+              background var(--t-fast) var(--ease-out);
+}
+.side-header-actions button:hover {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+}
+
+.side-content {
+  flex: 1;
+  overflow: auto;
+  padding: 8px 0;
+}
+
+.side-section {
+  padding: 8px 0;
+}
+.side-section + .side-section {
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* File-tree rows. Selected row gets the tinted active background
+ * (matches the active activity-pill). */
+.tree-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 14px;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  transition: color var(--t-fast) var(--ease-out),
+              background var(--t-fast) var(--ease-out);
+}
+.tree-row:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+.tree-row.selected {
+  background: var(--bg-active);
+  color: var(--text-primary);
+}
+.tree-row.selected::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent-glow);
+}
+.tree-row svg.icon-file {
+  width: 14px;
+  height: 14px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.tree-row.dsol svg.icon-file { color: var(--accent); }
+.tree-row .tree-mod-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-left: auto;
+}
+.tree-indent { display: inline-block; width: 12px; }
+
+.empty-state {
+  padding: 32px 20px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+}
+.empty-state svg {
+  display: block;
+  margin: 0 auto 16px;
+  opacity: 0.6;
+  color: var(--accent);
+}
+.empty-state .empty-cta { margin-top: 16px; display: inline-block; }
+
+/* ─── Buttons (used everywhere — not just chrome) ─────────────────────── */
+
+.btn-primary {
+  background: linear-gradient(180deg, var(--accent-hover), var(--accent));
+  color: var(--text-inverse);
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  padding: 9px 18px;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: var(--shadow-glow);
+  transition: filter var(--t-fast) var(--ease-out),
+              transform var(--t-fast) var(--ease-out);
+}
+.btn-primary:hover  { filter: brightness(1.06); }
+.btn-primary:active { transform: translateY(1px); filter: brightness(0.95); }
+.btn-primary:disabled {
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  box-shadow: none;
+  cursor: default;
+  filter: none;
+}
+.btn-primary svg { width: 14px; height: 14px; }
+
+.btn-secondary {
+  background: var(--bg-popover);
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: background var(--t-fast) var(--ease-out),
+              border-color var(--t-fast) var(--ease-out);
+}
+.btn-secondary:hover {
+  background: var(--bg-elevated);
+  border-color: var(--accent-border);
+}
+.btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-secondary svg { width: 14px; height: 14px; }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color var(--t-fast) var(--ease-out),
+              background var(--t-fast) var(--ease-out);
+}
+.btn-ghost:hover {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+}
+
+/* ─── Status bar ─────────────────────────────────────────────────────── */
+
+.statusbar {
+  grid-area: statusbar;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  gap: 14px;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  font-feature-settings: "tnum";
+}
+
+.status-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.status-item + .status-item::before {
+  content: '';
+  width: 1px;
+  height: 12px;
+  background: var(--border-subtle);
+  margin-right: 14px;
+}
+.status-item .status-label {
+  color: var(--text-faint);
+  font-weight: 500;
+}
+.status-item .status-value { font-weight: 600; }
+
+.status-conn-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-faint);
+  flex-shrink: 0;
+  transition: background var(--t-base) var(--ease-out),
+              box-shadow var(--t-base) var(--ease-out);
+}
+.status-conn-dot.connected {
+  background: var(--success);
+  box-shadow: 0 0 8px rgba(70, 216, 136, 0.5);
+}
+
+.status-spacer { flex: 1; }
+
+/* ─── Mobile (≤ 768 px) ──────────────────────────────────────────────────
+ *
+ * The desktop grid stops working below ~768 px because the activity bar +
+ * side panel + editor + plugin panel need >900 px to look right. Mobile
+ * gets a fundamentally different layout:
+ *
+ *   ┌───────────────────────────┐
+ *   │  topbar (compact)         │
+ *   ├───────────────────────────┤
+ *   │  side panel (full width)  │   ← shown when activity is files/etc
+ *   │   OR                      │
+ *   │  editor (full width)      │   ← shown when no side panel summoned
+ *   ├───────────────────────────┤
+ *   │  bottom-tab activity bar  │
+ *   └───────────────────────────┘
+ *
+ * The activity bar moves to the BOTTOM and becomes a horizontal tab strip.
+ * The side panel slides up from the bottom over the editor when an
+ * activity is selected; tapping the same tab again hides it.
+ */
+
+@media (max-width: 768px) {
+  /* Top bar gets a compact pad; brand mark drops to icon only. */
+  .topbar {
+    padding: 0 12px;
+    gap: 8px;
+  }
+  .topbar-brand span:not(.brand-mark) { display: none; }
+  .topbar-project { display: none; }
+  .network-pill { display: none; }
+
+  /* Stack the layout: top bar / content / bottom tabs / status bar. */
+  #app,
+  #app[data-side-collapsed="true"],
+  #app[data-plugin-collapsed="true"],
+  #app[data-side-collapsed="true"][data-plugin-collapsed="true"] {
+    grid-template-rows: 52px 1fr 60px 28px;
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "topbar"
+      "editor"
+      "activity"
+      "statusbar";
+  }
+  #app[data-terminal-open="true"] {
+    grid-template-rows: 52px 1fr 200px 60px 28px;
+    grid-template-areas:
+      "topbar"
+      "editor"
+      "terminal"
+      "activity"
+      "statusbar";
+  }
+
+  /* Activity bar becomes a horizontal bottom-tab strip. */
+  .activity {
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: stretch;
+    padding: 6px 8px;
+    gap: 0;
+    border-right: none;
+    border-top: 1px solid var(--border-subtle);
+    background: rgba(10, 10, 10, 0.85);
+    backdrop-filter: saturate(1.4) blur(12px);
+    -webkit-backdrop-filter: saturate(1.4) blur(12px);
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  .activity-divider { display: none; }
+
+  .activity-btn {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    border-radius: var(--radius-sm);
+  }
+  .activity-btn.active::before {
+    /* Replace the left rail with a top rail on mobile. */
+    left: 11px;
+    right: 11px;
+    top: -4px;
+    bottom: auto;
+    width: auto;
+    height: 3px;
+  }
+  .activity-tooltip { display: none; }
+
+  /* Side panel becomes a full-width drawer above the bottom tabs.
+   * It still uses the desktop grid area "side", but we override the
+   * layout so it overlays the editor when summoned. */
+  .side[data-mobile-open="true"] {
+    position: fixed;
+    inset: 52px 0 88px 0;        /* top bar + bottom-tab + status bar */
+    z-index: 50;
+    background: var(--bg-surface);
+    border-right: none;
+    border-top: 1px solid var(--border-subtle);
+    box-shadow: 0 -16px 40px rgba(0, 0, 0, 0.6);
+    animation: side-up 200ms var(--ease-out);
+  }
+  @keyframes side-up {
+    from { transform: translateY(20px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+  /* When closed on mobile, the side area collapses entirely. */
+  .side:not([data-mobile-open="true"]) {
+    grid-area: editor;            /* hide it behind the editor */
+    pointer-events: none;
+    opacity: 0;
+    width: 0;
+  }
+
+  /* Plugin panel never shows on mobile — its content surfaces inside
+   * the editor's empty state or the terminal's tabs instead. */
+  .plugin { display: none !important; }
+
+  /* Status bar trims to essentials on phones. */
+  .statusbar {
+    padding: 0 12px;
+    gap: 8px;
+    font-size: 10px;
+  }
+  .statusbar .status-mobile-hide { display: none !important; }
+}
+
+/* Touch hover suppression — on touch devices, the :hover state is sticky
+ * and ugly. Only show hover styles where a fine pointer is available. */
+@media (hover: none) {
+  .activity-btn:hover::after,
+  .tree-row:hover,
+  .btn-secondary:hover,
+  .btn-ghost:hover { background: transparent; border-color: transparent; }
+}

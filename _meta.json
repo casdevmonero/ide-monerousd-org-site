@@ -1,0 +1,12 @@
+{
+  "version": "1.2.209",
+  "contentType": "spa",
+  "rootHash": null,
+  "bundleSize": 13238517,
+  "publisher": "official",
+  "publishedAt": null,
+  "displayName": "MoneroUSD IDE",
+  "primaryDomain": "ide.monerousd.org",
+  "tier": "T1",
+  "verified": true
+}

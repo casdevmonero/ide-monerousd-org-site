@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" fill="none" stroke="#FF6600" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Connect a wallet illustration">
+  <!-- Wallet icon with a plug coming out of it. -->
+  <!-- Wallet body -->
+  <rect x="36" y="60" width="112" height="76" rx="8" />
+  <!-- Wallet flap -->
+  <path d="M36 76h112M132 96h12v18h-12z" />
+  <!-- Cable -->
+  <path d="M148 110q24 12 0 30 q-24 12 0 30" stroke-dasharray="4 4" />
+  <!-- Plug -->
+  <g transform="translate(140,168)">
+    <rect x="0" y="-6" width="24" height="12" rx="2" />
+    <path d="M-6 -3v6M-6 0h6" />
+  </g>
+  <!-- Lightning accents -->
+  <g opacity="0.55">
+    <path d="M70 88l-6 12h8l-4 12 12-16h-8l4-8z" />
+  </g>
+</svg>

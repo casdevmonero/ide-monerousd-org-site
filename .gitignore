@@ -1,0 +1,93 @@
+# Sovereign site bundle — default-deny stance with web-asset allowlist.
+# Anything not explicitly allowed is blocked. New file types adding to
+# the bundle require a PR updating this list.
+
+# Default-deny.
+*
+
+# Web assets
+!*.html
+!*.htm
+!*.css
+!*.js
+!*.cjs
+!*.mjs
+!*.json
+!*.yml
+!*.yaml
+!*.svg
+!*.png
+!*.jpg
+!*.jpeg
+!*.gif
+!*.webp
+!*.ico
+!*.woff
+!*.woff2
+!*.ttf
+!*.otf
+!*.txt
+!*.md
+!*.pdf
+!*.wasm
+
+# Bundle metadata
+!_meta.json
+!SHA256SUMS
+
+# GitHub Pages markers
+!CNAME
+!.gitignore
+!.nojekyll
+
+# Allow descending into directories so the patterns above can match
+# nested files. Without this, `*` would block every directory and
+# the !-allowlist below would never be reached.
+!*/
+
+# Explicit deny — credential-class files (defense in depth)
+*.seed
+*.keys
+*.wallet
+*.address.txt
+*.spend_key
+*.view_key
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.gpg
+*.asc
+.env
+.env.*
+.envrc
+secrets.*
+credentials.*
+*.token
+*.pat
+.npmrc
+.netrc
+
+# Personal config dirs
+.aws/
+.ssh/
+.gnupg/
+.monerousd/
+.docker/
+.claude/
+.cursor/
+
+# OS / IDE metadata
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal

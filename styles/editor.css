@@ -1,0 +1,397 @@
+/* Editor area: tab strip + Monaco container.
+ * The Monaco theme is registered in JS (lib/dsol-language.js); this file
+ * only handles the surrounding chrome and the placeholder shown when no
+ * file is open. */
+
+.editor {
+  grid-area: editor;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-elevated);
+  overflow: hidden;
+  position: relative;
+}
+
+/* ───────────── Tab strip ───────────── */
+
+.tabs {
+  display: flex;
+  height: 32px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  height: 100%;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  border-right: 1px solid var(--border-subtle);
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  white-space: nowrap;
+  flex-shrink: 0;
+  max-width: 220px;
+  transition: color 120ms ease-out, background 120ms ease-out;
+}
+.tab:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+.tab.active {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+}
+.tab.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent);
+}
+
+.tab .tab-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+.tab.dsol .tab-icon { color: var(--accent); }
+.tab .tab-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tab .tab-mod-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+.tab.modified .tab-mod-dot { opacity: 1; }
+.tab .tab-close {
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  border-radius: 3px;
+  margin-left: 2px;
+  opacity: 0;
+  transition: opacity 120ms ease-out, color 120ms ease-out, background 120ms ease-out;
+}
+.tab:hover .tab-close,
+.tab.active .tab-close,
+.tab.modified .tab-close {
+  opacity: 1;
+}
+.tab .tab-close:hover {
+  color: var(--text-primary);
+  background: var(--bg-popover);
+}
+.tab .tab-close svg { width: 10px; height: 10px; }
+
+/* ───────────── Editor body ───────────── */
+
+.editor-body {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+#monaco-host {
+  position: absolute;
+  inset: 0;
+}
+
+/* Empty editor placeholder */
+.editor-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: var(--fs-base);
+  pointer-events: none;
+  gap: 18px;
+}
+.editor-empty img {
+  width: 96px;
+  height: 96px;
+  opacity: 0.18;
+  filter: drop-shadow(0 4px 12px rgba(255, 102, 0, 0.18));
+}
+.editor-empty .editor-empty-title {
+  font-size: var(--fs-lg);
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.editor-empty .editor-empty-hint {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.editor-empty .editor-empty-shortcuts {
+  display: flex;
+  gap: 24px;
+  margin-top: 12px;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+.editor-empty kbd {
+  display: inline-block;
+  padding: 2px 6px;
+  background: var(--bg-popover);
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-secondary);
+  margin: 0 2px;
+}
+
+/* The "fallback" textarea editor used when Monaco fails to load —
+ * always functional so we never have a blank page.
+ *
+ * NOTE: must use `:not([hidden])` so an explicit `display: flex` here
+ * doesn't override the browser's default `[hidden] { display: none }`.
+ * Earlier versions of this rule shipped without `:not([hidden])` and the
+ * fallback warning rendered ON TOP of a perfectly-loaded Monaco editor —
+ * users saw the "couldn't load" message even though Monaco was working. */
+.editor-fallback:not([hidden]) {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+.editor-fallback-head {
+  background: var(--bg-popover);
+  color: var(--warning);
+  font-size: var(--fs-xs);
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.editor-fallback textarea {
+  flex: 1;
+  width: 100%;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+  padding: 12px 16px;
+  border: none;
+  outline: none;
+  resize: none;
+  caret-color: var(--accent);
+  tab-size: 2;
+}
+.editor-fallback textarea::selection {
+  background: var(--accent-soft);
+  color: var(--text-primary);
+}
+
+/* Problems strip — between editor body and terminal when there are
+ * compile errors. Click any row to jump the cursor. */
+.problems-strip {
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  max-height: 120px;
+  overflow: auto;
+  display: none;
+}
+.problems-strip[data-has-errors="true"] { display: block; }
+.problem-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  font-size: var(--fs-sm);
+  border-bottom: 1px solid var(--border-subtle);
+  cursor: pointer;
+  color: var(--text-primary);
+}
+.problem-row:hover { background: var(--bg-hover); }
+.problem-row.error { border-left: 3px solid var(--danger); }
+.problem-row.warning { border-left: 3px solid var(--warning); }
+.problem-row.info { border-left: 3px solid var(--info); }
+.problem-row .problem-loc {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+.problem-row .problem-msg { flex: 1; }
+
+/* ───────────── Page-content slot (when a non-editor activity is showing) ───────────── */
+
+.page-content {
+  position: absolute;
+  inset: 0;
+  background: var(--bg-elevated);
+  overflow: auto;
+  padding: 24px 32px;
+  display: none;
+}
+.page-content[data-active="true"] {
+  display: block;
+  animation: fadeIn 200ms ease-out;
+}
+.page-content h1 {
+  font-size: var(--fs-2xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+.page-content h2 {
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 24px 0 12px;
+}
+.page-content h3 {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 16px 0 8px;
+}
+.page-content p {
+  font-size: var(--fs-base);
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  line-height: var(--lh-normal);
+}
+.page-content .lead {
+  font-size: var(--fs-md);
+  color: var(--text-secondary);
+  max-width: 720px;
+  line-height: var(--lh-normal);
+  margin-bottom: 24px;
+}
+.page-content section {
+  margin-bottom: 32px;
+}
+.page-content .section-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+/* Cards used inside page-content (templates list, deployed-list rows,
+ * settings rows, reference doc) */
+.card {
+  background: var(--bg-popover);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  transition: transform 150ms ease-out, border-color 150ms ease-out, box-shadow 150ms ease-out;
+}
+.card:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-elev-1);
+}
+.card-title {
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+.card-sub {
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+/* Form controls (used in publish wizard, deploy form, settings) */
+.form-row { margin-bottom: 16px; }
+.form-row label {
+  display: block;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+.form-row input,
+.form-row select,
+.form-row textarea {
+  width: 100%;
+  background: var(--bg-popover);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--fs-base);
+  padding: 8px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  transition: border-color 120ms ease-out, box-shadow 120ms ease-out;
+}
+.form-row textarea {
+  font-family: var(--font-mono);
+  resize: vertical;
+  min-height: 80px;
+}
+.form-row input:focus,
+.form-row select:focus,
+.form-row textarea:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.form-row .help {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+.form-row .err {
+  font-size: var(--fs-xs);
+  color: var(--danger);
+  margin-top: 4px;
+}
+
+/* Code blocks inside reference / docs */
+.codeblock {
+  background: var(--bg-base);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+  overflow-x: auto;
+  white-space: pre;
+}
+
+/* Inline mono emphasis (hashes, addresses, opcodes) */
+.mono-pill {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  background: var(--bg-popover);
+  color: var(--text-primary);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.01em;
+}

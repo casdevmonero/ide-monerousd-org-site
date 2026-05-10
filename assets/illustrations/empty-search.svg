@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" fill="none" stroke="#FF6600" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="No matching results illustration">
+  <!-- Magnifier over an empty grid. -->
+  <g opacity="0.5">
+    <path d="M40 60h60M40 80h60M40 100h60M40 120h60M40 140h60" stroke-dasharray="2 5" />
+    <path d="M40 60v90M60 60v90M80 60v90M100 60v90" stroke-dasharray="2 5" />
+  </g>
+  <!-- Magnifier ring -->
+  <circle cx="130" cy="92" r="32" />
+  <!-- Magnifier handle -->
+  <path d="M152 114l22 22" />
+  <!-- Inner squiggle (no result) -->
+  <path d="M118 92h24" stroke-opacity="0.85" />
+  <!-- Sparkles -->
+  <g opacity="0.45">
+    <path d="M170 50l3 3-3 3-3-3z" />
+    <path d="M40 30l3 3-3 3-3-3z" />
+  </g>
+</svg>

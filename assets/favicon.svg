@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="MoneroUSD IDE">
+  <!--
+    32x32 favicon — solid orange hexagon, simplified glyph for legibility
+    at small sizes. Browsers that prefer SVG icons render this; older
+    browsers fall back to the alternate /assets/favicon.ico.
+  -->
+  <defs>
+    <linearGradient id="fv" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FF8833" />
+      <stop offset="100%" stop-color="#E65800" />
+    </linearGradient>
+  </defs>
+
+  <polygon points="16,1 30,8.5 30,23.5 16,31 2,23.5 2,8.5" fill="url(#fv)" />
+
+  <g fill="#fff">
+    <rect x="7" y="10" width="2.5" height="12" rx="0.4" />
+    <polygon points="10.5,10 12.5,10 14.5,19 12,19" />
+    <polygon points="19.5,10 21.5,10 19,19 16.5,19" />
+    <rect x="22.5" y="10" width="2.5" height="12" rx="0.4" />
+    <circle cx="16" cy="19.5" r="1.4" />
+  </g>
+</svg>

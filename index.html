@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+  <!-- IDE-6: NO 'unsafe-eval'. Monaco runs main-thread; workers stubbed. -->
+  <!-- IDE-4: every script + asset is same-origin (vendored). connect-src lets
+       the IDE reach (a) the canonical Ion indexer family on *.monerousd.org,
+       (b) the local desktop wallet bus + sovereign-server on loopback,
+       (c) any user-run indexer / wallet on loopback at any port — so a user
+       self-hosting the IDE on their own machine ('http://localhost:8080/'
+       or similar) can still connect to a sidecar indexer they run themselves.
+       LAN / cross-host CSP relaxation is left to the operator's nginx config. -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src  'self';
+    style-src   'self' 'unsafe-inline';
+    font-src    'self' data:;
+    img-src     'self' data: blob:;
+    connect-src 'self' https://*.monerousd.org http://localhost:* http://127.0.0.1:* https://localhost:* https://127.0.0.1:* ws://localhost:* ws://127.0.0.1:* wss://localhost:* wss://127.0.0.1:*;
+    frame-src   blob:;
+    child-src   blob:;
+    worker-src  'none';
+    object-src  'none';
+    base-uri    'self';
+    form-action 'none';
+  " />
+
+  <title>MoneroUSD IDE — Build dark contracts. Publish sovereign sites.</title>
+  <meta name="description" content="Web IDE for the MoneroUSD chain. Author DSOL contracts, run them in a browser-side DarkVM, deploy on-chain, and publish sovereign sites — all signed through your MoneroUSD wallet. Every publish strengthens the reserve." />
+  <meta name="theme-color" content="#0a0a0a" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="MoneroUSD IDE" />
+
+  <!-- Open Graph / Twitter unfurl -->
+  <meta property="og:type"        content="website" />
+  <meta property="og:title"       content="MoneroUSD IDE" />
+  <meta property="og:description" content="Build dark contracts. Publish sovereign sites. Strengthen the peg." />
+  <meta property="og:image"       content="/assets/og-card.png" />
+  <meta property="og:url"         content="https://ide.monerousd.org/" />
+  <meta property="og:site_name"   content="MoneroUSD" />
+  <meta name="twitter:card"        content="summary_large_image" />
+  <meta name="twitter:title"       content="MoneroUSD IDE" />
+  <meta name="twitter:description" content="Build dark contracts. Publish sovereign sites. Strengthen the peg." />
+  <meta name="twitter:image"       content="/assets/og-card.png" />
+
+  <link rel="icon"        type="image/svg+xml" href="/assets/ide-logo.svg" />
+  <link rel="alternate icon" href="/assets/favicon.ico" />
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
+  <link rel="manifest" href="/assets/manifest.webmanifest" />
+
+  <!-- Preload variable fonts (vendored — IDE-4) -->
+  <link rel="preload" as="font" type="font/woff2"
+        href="/lib/fonts/inter-variable.woff2" crossorigin="anonymous" />
+  <link rel="preload" as="font" type="font/woff2"
+        href="/lib/fonts/jetbrains-mono-variable.woff2" crossorigin="anonymous" />
+
+  <!-- Design-token stylesheet must load first; everything else inherits its custom properties. -->
+  <link rel="stylesheet" href="/styles/tokens.css" />
+  <link rel="stylesheet" href="/styles/animations.css" />
+  <link rel="stylesheet" href="/styles/chrome.css" />
+  <link rel="stylesheet" href="/styles/editor.css" />
+  <link rel="stylesheet" href="/styles/plugin-panel.css" />
+  <link rel="stylesheet" href="/styles/terminal.css" />
+  <link rel="stylesheet" href="/styles/modals.css" />
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     v1.2.182: the "too-small-splash" gate is gone. The IDE now adapts to
+     phones and tablets — chrome.css owns the responsive layout (bottom-tab
+     activity bar below 768 px, full-width side-panel drawer, plugin panel
+     hides). Code editing on a phone is awkward but explicitly supported,
+     and read-only browsing of a project is now first-class.
+     ═══════════════════════════════════════════════════════════════════════════ -->
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     Main app grid — chrome.css owns the layout.
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div id="app"
+     data-side-collapsed="false"
+     data-plugin-collapsed="false"
+     data-terminal-open="true"
+     data-active-activity="files">
+
+  <!-- ──────── Top bar ──────── -->
+  <header class="topbar">
+    <a class="topbar-brand" href="#" data-action="goto-home" aria-label="MoneroUSD IDE home">
+      <img src="/assets/ide-logo.svg" alt="" width="24" height="24" />
+      <span>MoneroUSD <span class="brand-mark">IDE</span></span>
+    </a>
+
+    <div class="topbar-project">
+      <input id="project-name-input"
+             type="text"
+             value="Untitled project"
+             aria-label="Project name"
+             autocomplete="off"
+             spellcheck="false" />
+    </div>
+
+    <div class="topbar-right">
+      <span id="network-pill" class="network-pill" title="USDm mainnet (chain id 0xUSDm)">
+        USDm mainnet
+      </span>
+      <!--
+        The top-bar connect button is owned by `components/connect-button.js`,
+        which renders a context-aware UX (install guide when absent, menu modal
+        when connected, connect flow when present). It must NOT carry
+        `data-action="connect-wallet"` — the global delegated handler in
+        app.js would fire in addition to the mount handler, double-invoking
+        connect() on every click and overwriting the install-guide modal
+        with the generic connect-error modal. The `data-action` attribute is
+        intentional on inline buttons elsewhere (deploy.js / compiler.js side
+        panels) where they DON'T have a dedicated mount handler.
+      -->
+      <button id="connect-btn" class="btn-connect" type="button">
+        Connect MoneroUSD
+      </button>
+    </div>
+  </header>
+
+  <!-- ──────── Activity bar ──────── -->
+  <nav class="activity" aria-label="Activities">
+    <button class="activity-btn active" data-activity="files" type="button" aria-label="Files">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+      </svg>
+      <span class="activity-tooltip">Files</span>
+    </button>
+    <button class="activity-btn" data-activity="compiler" type="button" aria-label="DSOL Compiler">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M14 3l7 7-7 7M21 10H10a4 4 0 00-4 4v7" />
+      </svg>
+      <span class="activity-tooltip">DSOL Compiler</span>
+    </button>
+    <button class="activity-btn" data-activity="run" type="button" aria-label="Run (local VM)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polygon points="6 4 20 12 6 20 6 4" />
+      </svg>
+      <span class="activity-tooltip">Run (local VM)</span>
+    </button>
+    <button class="activity-btn" data-activity="deploy" type="button" aria-label="Deploy &amp; Run on-chain">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 15a4 4 0 00-4-4h-1.26A8 8 0 103 16h2" />
+        <path d="M16 16l-4-4-4 4M12 12v9" />
+      </svg>
+      <span class="activity-tooltip">Deploy &amp; Run (on-chain)</span>
+    </button>
+    <button class="activity-btn" data-activity="site-preview" type="button" aria-label="Site preview" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18" />
+      </svg>
+      <span class="activity-tooltip">Site preview</span>
+    </button>
+
+    <div class="activity-divider"></div>
+
+    <button class="activity-btn" data-activity="templates" type="button" aria-label="Templates">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="7" height="7" rx="1.5" />
+        <rect x="14" y="3" width="7" height="7" rx="1.5" />
+        <rect x="3" y="14" width="7" height="7" rx="1.5" />
+        <rect x="14" y="14" width="7" height="7" rx="1.5" />
+      </svg>
+      <span class="activity-tooltip">Templates</span>
+    </button>
+    <button class="activity-btn" data-activity="reference" type="button" aria-label="Reference">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5z" />
+        <path d="M8 7h8M8 11h8M8 15h6" />
+      </svg>
+      <span class="activity-tooltip">Reference</span>
+    </button>
+    <button class="activity-btn" data-activity="settings" type="button" aria-label="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.87-.34 1.7 1.7 0 00-1 1.55V21a2 2 0 01-4 0v-.1a1.7 1.7 0 00-1.11-1.55 1.7 1.7 0 00-1.87.34l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.7 1.7 0 00.34-1.87 1.7 1.7 0 00-1.55-1H3a2 2 0 010-4h.1a1.7 1.7 0 001.55-1.11 1.7 1.7 0 00-.34-1.87l-.06-.06a2 2 0 012.83-2.83l.06.06a1.7 1.7 0 001.87.34h.01a1.7 1.7 0 001-1.55V3a2 2 0 014 0v.1a1.7 1.7 0 001 1.55 1.7 1.7 0 001.87-.34l.06-.06a2 2 0 012.83 2.83l-.06.06a1.7 1.7 0 00-.34 1.87v.01a1.7 1.7 0 001.55 1H21a2 2 0 010 4h-.1a1.7 1.7 0 00-1.55 1z" />
+      </svg>
+      <span class="activity-tooltip">Settings</span>
+    </button>
+  </nav>
+
+  <!-- ──────── Side panel ──────── -->
+  <aside class="side" aria-label="Side panel">
+    <div class="side-header">
+      <span id="side-header-title">Files</span>
+      <span class="side-header-actions">
+        <button id="side-action-new"
+                data-action="new-file"
+                type="button"
+                aria-label="New file"
+                title="New file (Ctrl/Cmd+N)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" aria-hidden="true">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        </button>
+        <button id="side-action-collapse"
+                data-action="toggle-side"
+                type="button"
+                aria-label="Collapse side panel"
+                title="Toggle side panel (Ctrl/Cmd+B)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" aria-hidden="true">
+            <path d="M15 6l-6 6 6 6" />
+          </svg>
+        </button>
+      </span>
+    </div>
+    <div id="side-content" class="side-content"></div>
+  </aside>
+
+  <!-- ──────── Editor area ──────── -->
+  <section class="editor" aria-label="Editor">
+    <div id="tabs" class="tabs" role="tablist"></div>
+    <div class="editor-body">
+      <div id="monaco-host" aria-hidden="false"></div>
+
+      <!-- Empty state shown when no files are open. -->
+      <div id="editor-empty" class="editor-empty">
+        <img src="/assets/ide-logo.svg" alt="" />
+        <div class="editor-empty-title">No file open</div>
+        <div class="editor-empty-hint">Pick a file from the sidebar, open a template, or start a new project.</div>
+        <div class="editor-empty-shortcuts">
+          <span><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>P</kbd> &nbsp;Quick open</span>
+          <span><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>K</kbd> &nbsp;Command palette</span>
+          <span><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd> &nbsp;Compile</span>
+        </div>
+      </div>
+
+      <!-- Page-content slot used by Templates / Reference / Settings activities. -->
+      <div id="page-content" class="page-content"></div>
+
+      <!-- Fallback editor — visible only if Monaco fails to load. -->
+      <div id="editor-fallback" class="editor-fallback" hidden>
+        <div class="editor-fallback-head">
+          ⚠ Monaco editor couldn't load. Using fallback textarea — full functionality, reduced highlighting.
+        </div>
+        <textarea id="editor-fallback-textarea" spellcheck="false"></textarea>
+      </div>
+    </div>
+
+    <!-- Problems strip surfaces compile errors when present. -->
+    <div id="problems-strip" class="problems-strip" data-has-errors="false" aria-live="polite"></div>
+  </section>
+
+  <!-- ──────── Plugin panel (right) ──────── -->
+  <aside class="plugin" aria-label="Plugin panel">
+    <div class="plugin-header">
+      <span id="plugin-header-title">Inspector</span>
+      <span class="plugin-header-actions">
+        <button id="plugin-collapse"
+                data-action="toggle-plugin"
+                type="button"
+                aria-label="Collapse panel"
+                title="Toggle plugin panel">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" aria-hidden="true">
+            <path d="M9 6l6 6-6 6" />
+          </svg>
+        </button>
+      </span>
+    </div>
+    <div id="plugin-body" class="plugin-body"></div>
+  </aside>
+
+  <!-- ──────── Terminal ──────── -->
+  <section id="terminal" class="terminal" aria-label="Terminal" data-hidden="false">
+    <div id="terminal-resize" class="terminal-resize" title="Drag to resize"></div>
+    <div class="terminal-header">
+      <div class="terminal-tabs">
+        <button class="terminal-tab active"
+                data-terminal-tab="output"
+                type="button">Output <span class="terminal-tab-count" id="tcount-output">0</span></button>
+        <button class="terminal-tab"
+                data-terminal-tab="problems"
+                type="button">Problems <span class="terminal-tab-count error" id="tcount-problems">0</span></button>
+      </div>
+      <label class="terminal-filter">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7" />
+          <path d="M21 21l-4.35-4.35" />
+        </svg>
+        <input id="terminal-filter-input"
+               type="search"
+               placeholder="Filter…"
+               aria-label="Filter terminal output"
+               autocomplete="off"
+               spellcheck="false" />
+      </label>
+      <div class="terminal-actions">
+        <button id="terminal-clear"
+                data-action="terminal-clear"
+                type="button"
+                aria-label="Clear terminal"
+                title="Clear">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+          </svg>
+        </button>
+        <button id="terminal-toggle"
+                data-action="toggle-terminal"
+                type="button"
+                aria-label="Toggle terminal"
+                title="Toggle terminal (Ctrl/Cmd+J)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div id="terminal-body" class="terminal-body" data-empty="true">
+      Terminal output will appear here.
+    </div>
+  </section>
+
+  <!-- ──────── Status bar ──────── -->
+  <footer class="statusbar" aria-label="Status">
+    <span class="status-item">
+      <span id="status-conn-dot" class="status-conn-dot"></span>
+      <span id="status-conn-text">Disconnected</span>
+    </span>
+    <span class="status-item" id="status-network">USDm mainnet</span>
+    <span class="status-item" id="status-file" hidden>—</span>
+    <span class="status-item" id="status-cursor" hidden>Ln 1, Col 1</span>
+    <span class="status-spacer"></span>
+    <span class="status-item" id="status-sync">IndexedDB · ready</span>
+    <span class="status-item status-mobile-hide" id="status-version">v1.2.183</span>
+  </footer>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     Toast stack (announced via aria-live="polite") + modal overlay roots.
+     ═══════════════════════════════════════════════════════════════════════════ -->
+
+<div id="toast-stack" class="toast-stack" aria-live="polite" aria-atomic="false"></div>
+
+<div id="modal-root" class="modal-backdrop" data-hidden="true" role="dialog" aria-modal="true" aria-hidden="true">
+  <!-- Modal body injected by JS. -->
+</div>
+
+<div id="cmdk-root" class="modal-backdrop" data-hidden="true" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Command palette">
+  <!-- Command palette injected by JS. -->
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     Boot. Single ES module — no CDN — IDE-3/IDE-4 enforced via CSP above.
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<script type="module" src="/app.js"></script>
+
+</body>
+</html>

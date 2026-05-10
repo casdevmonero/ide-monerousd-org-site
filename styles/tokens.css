@@ -1,0 +1,247 @@
+/* Design tokens — Monero orange on deep neutral surfaces.
+ *
+ * Single source of truth: every component reads var(--*) from this file.
+ * No hardcoded color values anywhere else in the codebase.
+ *
+ * v1.2.182 — palette + spacing scale ported from Ion Swap's design system
+ * so the IDE feels like part of the same product family. Highlights:
+ *   - Brand orange #ff6600 with an :hover state and a soft tint for fills.
+ *   - Deeper background ramp (#0a0a0a → #1a1a1a → #232323) for layered
+ *     elevation. Cards float visibly on the page background.
+ *   - Pill radius at 999px — the unifying motif for nav, buttons, badges.
+ *   - Ambient orange halo behind the chrome (body::before in chrome.css).
+ *   - Inter with OpenType ss01/cv01/cv02/cv11 alt-glyphs enabled for the
+ *     ionswap-grade clean digit treatment.
+ */
+
+/* Vendored variable fonts. IDE-4: never load fonts from a CDN.
+ * Files live at /lib/fonts/* and are populated by scripts/vendor-fonts.sh
+ * at build time (Inter v4.0 + JetBrains Mono v2.304, both OFL-licensed).
+ * font-display: swap means the system fallback paints first; the variable
+ * fonts replace it as soon as they finish loading — no FOIT. */
+@font-face {
+  font-family: 'Inter';
+  src: url('/lib/fonts/inter-variable.woff2') format('woff2-variations'),
+       url('/lib/fonts/inter-variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/lib/fonts/jetbrains-mono-variable.woff2') format('woff2-variations'),
+       url('/lib/fonts/jetbrains-mono-variable.woff2') format('woff2');
+  font-weight: 100 800;
+  font-display: swap;
+  font-style: normal;
+}
+
+:root {
+  /* Backgrounds — ionswap ramp, deepest to most-elevated */
+  --bg-base:        #0a0a0a;   /* page background */
+  --bg-surface:     #111111;   /* outer card / chrome */
+  --bg-elevated:    #1a1a1a;   /* inner card / input row */
+  --bg-popover:     #232323;   /* raised pill / popover */
+  --bg-hover:       #1f1f1f;   /* row hover */
+  --bg-active:      rgba(255, 102, 0, 0.10);   /* tinted active row */
+
+  /* Borders — translucent so they sit on any surface */
+  --border-subtle:  rgba(255, 255, 255, 0.06);
+  --border-strong:  rgba(255, 255, 255, 0.12);
+  --border-focus:   rgba(255, 102, 0, 0.55);
+
+  /* Brand — Monero orange */
+  --accent:         #ff6600;
+  --accent-hover:   #ff7a1f;
+  --accent-press:   #e65800;
+  --accent-soft:    rgba(255, 102, 0, 0.10);   /* soft fill for badges */
+  --accent-tint:    rgba(255, 102, 0, 0.18);   /* gradient top */
+  --accent-border:  rgba(255, 102, 0, 0.30);
+  --accent-glow:    rgba(255, 102, 0, 0.35);
+
+  /* Text */
+  --text-primary:   #f5f5f5;
+  --text-secondary: #c9c9c9;
+  --text-muted:     #8a8a8a;
+  --text-faint:     #6a6a6a;
+  --text-inverse:   #0a0a0a;
+
+  /* Semantic */
+  --success:        #46d888;
+  --warning:        #f59e0b;
+  --danger:         #ff5c5c;
+  --info:           #38bdf8;
+
+  /* Syntax */
+  --syn-keyword:    #ff7a1f;
+  --syn-type:       #facc15;
+  --syn-string:     #86efac;
+  --syn-number:     #f0abfc;
+  --syn-comment:    #6a6a6a;
+  --syn-fn:         #93c5fd;
+  --syn-var:        #f5f5f5;
+  --syn-error:      #ff5c5c;
+  --syn-attr:       #c084fc;
+  --syn-operator:   #d4d4d8;
+
+  /* Geometry — pill-first radii (ionswap) */
+  --radius-xs:      6px;
+  --radius-sm:      10px;
+  --radius-md:      14px;
+  --radius-lg:      18px;
+  --radius-xl:      22px;
+  --radius-2xl:     28px;
+  --radius-pill:    999px;
+
+  /* Elevation */
+  --shadow-elev-1:  0 1px 0 rgba(255, 255, 255, 0.04) inset,
+                    0 4px 12px rgba(0, 0, 0, 0.40);
+  --shadow-elev-2:  0 1px 0 rgba(255, 255, 255, 0.04) inset,
+                    0 8px 24px rgba(0, 0, 0, 0.50);
+  --shadow-elev-3:  0 1px 0 rgba(255, 255, 255, 0.06) inset,
+                    0 16px 48px rgba(0, 0, 0, 0.55);
+  --shadow-glow:    0 6px 20px var(--accent-glow),
+                    0 1px 0 rgba(255, 255, 255, 0.20) inset;
+  --shadow-focus:   0 0 0 3px var(--accent-soft);
+
+  /* Spacing — used sparingly; most components inline literals */
+  --space-1:        4px;
+  --space-2:        8px;
+  --space-3:        12px;
+  --space-4:        16px;
+  --space-5:        20px;
+  --space-6:        24px;
+  --space-8:        32px;
+
+  /* Type scale */
+  --font-ui:        'Inter', -apple-system, BlinkMacSystemFont,
+                    'Segoe UI', Roboto, system-ui, sans-serif;
+  --font-mono:      'JetBrains Mono', ui-monospace, 'SF Mono',
+                    Menlo, Consolas, monospace;
+  --fs-xs:          11px;
+  --fs-sm:          12px;
+  --fs-base:        13px;
+  --fs-md:          14px;
+  --fs-lg:          16px;
+  --fs-xl:          20px;
+  --fs-2xl:         26px;
+  --lh-tight:       1.25;
+  --lh-normal:      1.5;
+
+  /* Motion */
+  --t-fast:         120ms;
+  --t-base:         150ms;
+  --t-slow:         200ms;
+  --ease-out:       cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out:    cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+*:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+  border-radius: var(--radius-xs);
+}
+
+/* Guard: any `display: …` author rule beats the user-agent
+ * `[hidden] { display: none }` declaration. Without this, an element
+ * with the `hidden` attribute can still render visually if any selector
+ * gives it an explicit display value. The fallout was real: v1.2.181
+ * shipped with `.editor-fallback { display: flex }` which kept the
+ * "Monaco couldn't load" warning on screen even when Monaco WAS
+ * loaded. The `!important` flag here makes `[hidden]` always win. */
+[hidden] { display: none !important; }
+
+html, body {
+  height: 100%;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--fs-base);
+  font-feature-settings: "ss01", "cv01", "cv02", "cv11";
+  letter-spacing: -0.005em;
+  line-height: var(--lh-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+}
+
+#app { width: 100vw; height: 100vh; display: flex; flex-direction: column; }
+
+button, input, select, textarea {
+  font-family: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+  font-feature-settings: inherit;
+}
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+  transition: color var(--t-fast) var(--ease-out);
+}
+a:hover { color: var(--accent-hover); }
+
+::selection { background: var(--accent-tint); color: var(--text-primary); }
+
+/* Scrollbars — quietly themed, never the focal point */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-pill);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.14); background-clip: padding-box; }
+
+.mono { font-family: var(--font-mono); }
+.tabular { font-variant-numeric: tabular-nums; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0;
+  margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0;
+}
+
+.sep {
+  display: inline-block;
+  width: 1px;
+  height: 12px;
+  background: var(--border-subtle);
+  vertical-align: middle;
+  margin: 0 var(--space-1);
+}
+
+/* ─── Ambient orange halo behind the entire chrome ───────────────────────
+ * ionswap signature: a soft radial gradient anchored at the top-center
+ * of the viewport. Sits behind everything, never intercepts pointer
+ * events, gives the IDE a warm signature you remember after closing it. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: -20% -20% auto -20%;
+  height: 60vh;
+  background: radial-gradient(
+    ellipse at 50% 0%,
+    rgba(255, 102, 0, 0.10) 0%,
+    rgba(255, 102, 0, 0.04) 30%,
+    transparent 60%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+#app { position: relative; z-index: 1; }
+
+/* ─── Reduced motion: quiet everything down ────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

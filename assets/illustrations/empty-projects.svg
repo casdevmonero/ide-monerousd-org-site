@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" fill="none" stroke="#FF6600" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="No projects illustration">
+  <!-- Empty workbench: closed laptop + a few floating dust motes. -->
+  <g opacity="0.95">
+    <!-- Laptop base -->
+    <path d="M30 130h140l8 16H22z" />
+    <!-- Lid -->
+    <path d="M44 130v-66a4 4 0 0 1 4-4h104a4 4 0 0 1 4 4v66" />
+    <!-- Screen content lines -->
+    <path d="M64 80h72M64 95h54M64 110h64" stroke-opacity="0.5" stroke-dasharray="2 4" />
+    <!-- Hinge highlight -->
+    <path d="M22 146h156" stroke-opacity="0.4" />
+  </g>
+  <!-- Floating "block" hexagons -->
+  <g opacity="0.55">
+    <polygon points="174,40 188,48 188,64 174,72 160,64 160,48" />
+    <polygon points="22,30 32,36 32,48 22,54 12,48 12,36" />
+    <polygon points="178,90 184,93 184,99 178,102 172,99 172,93" stroke-opacity="0.4" />
+  </g>
+  <!-- Caret / plus accent inside lid -->
+  <g opacity="0.4" stroke-dasharray="3 3">
+    <path d="M100 65v35M82 82h36" />
+  </g>
+</svg>

@@ -1,0 +1,110 @@
+/* Animation primitives. Every animation must respect prefers-reduced-motion.
+ * No generic CSS spinners — the .spinner class is the 3-dot pulse loader
+ * called for in the plan's polish details. */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(100%); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideOutRight {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(100%); }
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes accentFlash {
+  0%   { background-color: var(--accent-soft); }
+  100% { background-color: transparent; }
+}
+
+@keyframes accentGlow {
+  0%, 100% { box-shadow: 0 0 0 rgba(255, 102, 0, 0); }
+  50%      { box-shadow: var(--shadow-glow); }
+}
+
+@keyframes pulseDots {
+  0%   { transform: scale(0.6); opacity: 0.4; }
+  40%  { transform: scale(1);   opacity: 1;   }
+  80%  { transform: scale(0.6); opacity: 0.4; }
+  100% { transform: scale(0.6); opacity: 0.4; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
+}
+
+/* 3-dot pulse loader — replaces every CSS spinner in the IDE.
+ * Renders inline anywhere async work is in flight. */
+.spinner {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 16px;
+}
+.spinner > span {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulseDots 1s ease-in-out infinite;
+}
+.spinner > span:nth-child(2) { animation-delay: 0.15s; }
+.spinner > span:nth-child(3) { animation-delay: 0.3s; }
+
+.spinner-sm > span { width: 6px; height: 6px; }
+.spinner-lg > span { width: 10px; height: 10px; }
+
+/* Inline copy-confirm pulse: turn a copy icon into a green check for 1.2s */
+@keyframes copyConfirm {
+  0%, 100% { color: var(--text-secondary); }
+  10%, 90% { color: var(--success); }
+}
+.copy-confirmed {
+  animation: copyConfirm 1200ms ease-in-out;
+}
+
+/* Compile-success pulse on the activity-bar item */
+.compile-flash {
+  animation: accentFlash 600ms ease-out;
+}
+
+/* Toast in/out */
+.toast-enter { animation: slideInRight 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.toast-leave { animation: slideOutRight 160ms ease-in forwards; }
+
+/* Modal in */
+.modal-enter { animation: modalIn 180ms ease-out forwards; }
+
+/* Empty-state fade */
+.fade-in { animation: fadeIn 200ms ease-out forwards; }
+
+/* Reduced-motion guard: zero out every animation + transition */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
