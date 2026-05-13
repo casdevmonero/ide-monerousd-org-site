@@ -1,0 +1,19 @@
+{
+  "_comment": "Populated by scripts/vendor-fonts.sh. CI verifies the pinned hashes match upstream releases of the listed versions. If you bump a version, regenerate hashes by running scripts/vendor-fonts.sh.",
+  "fonts": {
+    "inter-variable.woff2": {
+      "name": "Inter",
+      "version": "4.0",
+      "source": "https://github.com/rsms/inter/releases/download/v4.0/Inter-4.0.zip",
+      "license": "OFL-1.1",
+      "sha256": "8af7bd5b545567adffb3dfceb5bedb353a522d7bf1b3a2b8af7b6064156babc0"
+    },
+    "jetbrains-mono-variable.woff2": {
+      "name": "JetBrains Mono",
+      "version": "2.304",
+      "source": "https://github.com/JetBrains/JetBrainsMono/releases/download/v2.304/JetBrainsMono-2.304.zip",
+      "license": "OFL-1.1",
+      "sha256": "e190ee6595a3b9bd25278613a6f5d3766ee1a708f300ed44fa63dbe84051498f"
+    }
+  }
+}

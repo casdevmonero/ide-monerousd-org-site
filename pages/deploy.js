@@ -320,14 +320,40 @@ async function doDeploy() {
   const name = compile.abi?.name || 'Contract';
   showToast({ kind: 'info', title: `Deploying ${name}…`, body: 'Approve in your wallet popup.' });
   terminalApi().info(`Deploy → wallet popup for ${name} (${compile.bytecode.length} B, codeHash ${truncMiddle(compile.codeHash, 8, 4)})`);
+
+  // ──────── deploy with daemon-disconnect retry ────────
+  // The wallet's wallet-rpc has a stalled-keep-alive failure mode
+  // ("no connection to daemon" after long idle). v1.2.192 added a
+  // server-side retry but older wallets still surface it; we add a
+  // client-side single retry as defense-in-depth so the user
+  // doesn't have to click twice.
+  async function deployWithRetry() {
+    try {
+      return await provider.deployContract({
+        bytecode: compile.bytecode,
+        abi:      compile.abi,
+        codeHash: compile.codeHash,
+        name,
+      });
+    } catch (err) {
+      const msg = String(err?.message || err || '');
+      if (/no connection to daemon|daemon is busy|daemon.*not responding|connection to daemon/i.test(msg)) {
+        terminalApi().info('Wallet daemon transient — retrying once…');
+        await new Promise((r) => setTimeout(r, 1500));
+        return await provider.deployContract({
+          bytecode: compile.bytecode,
+          abi:      compile.abi,
+          codeHash: compile.codeHash,
+          name,
+        });
+      }
+      throw err;
+    }
+  }
+
   let res;
   try {
-    res = await provider.deployContract({
-      bytecode: compile.bytecode,
-      abi:      compile.abi,
-      codeHash: compile.codeHash,
-      name,
-    });
+    res = await deployWithRetry();
   } catch (err) {
     if (err?.name === 'ProviderUnavailableError' || err?.name === 'NotConnectedError') {
       showToast({ kind: 'error', title: 'Wallet not available', body: err.message });
@@ -339,11 +365,35 @@ async function doDeploy() {
     }
     return;
   }
-  if (!res?.contractId) {
-    showToast({ kind: 'error', title: 'Deploy returned no contractId', body: JSON.stringify(res || {}) });
-    terminalApi().error('Deploy returned no contractId — wallet contract.');
+
+  // The wallet's deployContract returns only the carrier tx hash
+  // immediately. The contractId materializes ~15-30s later when the
+  // chain monitor processes DC_DEPLOY. Per build-1261/CLAUDE.md
+  // rule 17 (success requires materialization, not optimism) we
+  // poll the indexer's /v1/contracts/by-tx/:hash endpoint until
+  // the contract row appears, then promote the deploy from
+  // pending → live. We DO NOT show "Deploy failed" just because
+  // contractId is missing — that was a misclassification.
+  const txHash = res?.txHash || res?.tx_hash || res?.txid || res?.hash || null;
+  let contractId = res?.contractId || null;
+  if (!contractId && !txHash) {
+    showToast({ kind: 'error', title: 'Deploy returned neither contractId nor txHash', body: JSON.stringify(res || {}) });
+    terminalApi().error('Deploy returned neither contractId nor txHash — wallet contract.');
     return;
   }
+  if (!contractId && txHash) {
+    showToast({ kind: 'info', title: `Deploy broadcast`, body: `tx ${truncMiddle(txHash, 8, 4)} — waiting for materialization…` });
+    terminalApi().info(`Deploy broadcast — polling /v1/contracts/by-tx/${txHash.slice(0,16)}…`);
+    contractId = await pollByTxHash(txHash);
+    if (!contractId) {
+      showToast({ kind: 'warning', title: 'Materialization timed out', body: `Tx ${truncMiddle(txHash, 8, 4)} broadcast but contract did not appear within 5 minutes. The deploy may still succeed — refresh in a few minutes.` });
+      terminalApi().error(`Materialization timeout for ${txHash}`);
+      return;
+    }
+  }
+  res = res || {};
+  res.contractId = contractId;
+  res.txHash = txHash;
   const contract = {
     contractId: res.contractId,
     txHash:     res.txHash || null,
@@ -436,6 +486,39 @@ async function forgetContract(contractId) {
 }
 
 /* ─── Polling materialization (rule 17) ──────────────────────────────── */
+
+// Resolve a deploy tx hash → contractId by polling the indexer's
+// /v1/contracts/by-tx/:hash endpoint. Returns the contractId on
+// success, null on timeout. Used by doDeploy() when the wallet
+// returns only the carrier tx hash without an immediate
+// contractId (which is the canonical case in v1.2.190+).
+async function pollByTxHash(txHash, timeoutMs = 5 * 60 * 1000) {
+  const indexerUrl = store.get('settings').indexerUrl;
+  const start = Date.now();
+  let pollIndex = 0;
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const r = await fetch(`${indexerUrl}/v1/contracts/by-tx/${encodeURIComponent(txHash)}`, {
+        headers: { 'Accept': 'application/json' },
+        cache: 'no-store',
+      });
+      if (r.ok) {
+        const j = await r.json();
+        const id = j?.contractId || j?.id;
+        if (id) return id;
+      }
+      // 404 = pending; anything else is a transient error but we keep polling.
+    } catch { /* network blip */ }
+    pollIndex++;
+    if (pollIndex % 6 === 0) {
+      const elapsed = Math.round((Date.now() - start) / 1000);
+      terminalApi().info(`Still waiting for materialization (${elapsed}s)…`);
+    }
+    // Faster poll for the first minute (5s), slower after (15s).
+    await sleep((Date.now() - start) < 60_000 ? 5000 : 15_000);
+  }
+  return null;
+}
 
 async function pollContractMaterialization(contract) {
   const indexerUrl = store.get('settings').indexerUrl;

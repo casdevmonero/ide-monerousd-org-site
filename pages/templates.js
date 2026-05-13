@@ -26,8 +26,60 @@ import { DSOL_TEMPLATES, SITE_TEMPLATES } from '../templates/manifest.js';
 let activated = false;
 let filter = { category: 'all', search: '' };
 
+/* ─── Iconography ──────────────────────────────────────────────────────────
+ *
+ * Every template gets a distinct, recognizable line icon. The kind-level
+ * defaults (ICON_DSOL hexagon for contracts, ICON_SITE globe for sites)
+ * fall back when a template doesn't have a per-id entry in ICONS_BY_ID.
+ *
+ * Visual rules:
+ *   - 24x24 viewBox to match the rest of the IDE icon set.
+ *   - stroke-width 1.6 + round caps/joins for the Monero IDE house style.
+ *   - `currentColor` stroke so the surrounding CSS picks the tint
+ *     (accent orange for contracts, info cyan for sovereign sites).
+ *
+ * The CSS in styles/templates.css caps the rendered size at 24px inside
+ * .card-icon and 16px inside .category-item — without those caps the
+ * SVGs filled their parent and dominated the layout (visible regression
+ * in v1.2.181 → v1.2.182 transition).
+ */
+
 const ICON_DSOL = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2 4 7v10l8 5 8-5V7Z"/><path d="m4 7 8 5 8-5"/><path d="M12 22V12"/></svg>`;
 const ICON_SITE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>`;
+
+const ICONS_BY_ID = {
+  /* DSOL contract templates */
+  // Counter — circular gauge with an up-arrow inside (increment).
+  counter: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 16V8"/><path d="m8 12 4-4 4 4"/></svg>`,
+  // Token Transfer — two coins, arrow between them.
+  'token-transfer': `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="12" r="3.5"/><circle cx="18" cy="12" r="3.5"/><path d="M9.5 12h5"/><path d="m12.5 10 2 2-2 2"/></svg>`,
+  // Private ERC20 — coin with a privacy-lock badge.
+  'erc-private': `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="11" r="6"/><path d="M10 8v6M7.5 11h5"/><rect x="14" y="13" width="7" height="6" rx="1.4"/><path d="M15.6 13v-1.4a1.9 1.9 0 0 1 3.8 0V13"/></svg>`,
+  // NFT Collection — overlapping picture cards.
+  'nft-collection': `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="13" height="13" rx="2"/><rect x="8" y="9" width="13" height="11" rx="2"/><circle cx="12.5" cy="13.5" r="1.4"/><path d="m10 18 3-3 4 4"/></svg>`,
+  // Voting — ballot box with a checkmark.
+  voting: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="9" width="18" height="11" rx="2"/><path d="M8 9V5h8v4"/><path d="m9 14 2.4 2.4L16 11.5"/></svg>`,
+  // Escrow — vault with a side handle.
+  escrow: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="11" cy="12" r="3.5"/><path d="M11 8.5v-1M11 16.5v-1M14.5 12h1M6.5 12h1"/><path d="M18 8v8"/></svg>`,
+  // Atomic Swap Escrow — two semicircle arrows forming a swap loop
+  // with a center key dot (adaptor secret).
+  'atomic-swap-escrow': `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 8h10a4 4 0 0 1 4 4"/><path d="m18 5 3 3-3 3"/><path d="M17 16H7a4 4 0 0 1-4-4"/><path d="m6 19-3-3 3-3"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/></svg>`,
+
+  /* Sovereign site templates */
+  // Blank — empty page outline.
+  blank: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>`,
+  // Single-page bio — a card with a centered person silhouette.
+  bio: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="12" cy="11" r="2.4"/><path d="M8 17a4 4 0 0 1 8 0"/></svg>`,
+  // Blog — three stacked lines + title bar.
+  blog: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/></svg>`,
+  // dApp shell — page outline with a play/connector glyph.
+  'dapp-shell': `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><circle cx="6" cy="6.5" r="0.7" fill="currentColor"/><circle cx="8.5" cy="6.5" r="0.7" fill="currentColor"/><path d="m10 16 2-3 2 3 3-4"/></svg>`,
+};
+
+function iconForTpl(tpl) {
+  return ICONS_BY_ID[tpl.id]
+    || (tpl.kind === 'contract' ? ICON_DSOL : ICON_SITE);
+}
 
 export async function activate({ sideEl, pluginEl, pageEl }) {
   if (!activated) {
@@ -155,11 +207,11 @@ function pickTemplates() {
 }
 
 function renderCard(tpl) {
-  const icon = tpl.kind === 'contract' ? ICON_DSOL : ICON_SITE;
+  const icon = iconForTpl(tpl);
   const kindLabel = tpl.kind === 'contract' ? 'Dark Contract' : 'Sovereign site';
   const fileCount = tpl.files.length;
   return `
-    <article class="template-card" data-tpl-fqid="${escapeAttr(tpl.fqId)}" tabindex="0">
+    <article class="template-card" data-tpl-fqid="${escapeAttr(tpl.fqId)}" data-tpl-kind="${escapeAttr(tpl.kind)}" tabindex="0">
       <div class="card-icon">${icon}</div>
       <div class="card-kind">${kindLabel}</div>
       <h3 class="card-name">${escapeHtml(tpl.name)}</h3>
@@ -186,7 +238,7 @@ function openDetail(tpl) {
 
   wrap.innerHTML = `
     <header class="detail-head">
-      <div class="detail-icon">${tpl.kind === 'contract' ? ICON_DSOL : ICON_SITE}</div>
+      <div class="detail-icon">${iconForTpl(tpl)}</div>
       <div>
         <div class="detail-kind">${tpl.kind === 'contract' ? 'Dark Contract' : 'Sovereign site'}</div>
         <h2>${escapeHtml(tpl.name)}</h2>

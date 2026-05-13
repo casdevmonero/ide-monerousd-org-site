@@ -1,12 +1,8 @@
 {
-  "version": "1.2.209",
+  "version":   "1.2.210",
+  "rootHash":  "760a2c5d6ba4d78b8faa63ea53a07c340bf9e8d574fb332d728f75b3d4f64134",
+  "bundleSize": 3560917,
   "contentType": "spa",
-  "rootHash": null,
-  "bundleSize": 13238517,
-  "publisher": "official",
-  "publishedAt": null,
-  "displayName": "MoneroUSD IDE",
-  "primaryDomain": "ide.monerousd.org",
-  "tier": "T1",
-  "verified": true
+  "fileCount":  105,
+  "_comment": "Built by scripts/build-bundle.sh. SW-1 sovereign-server reads rootHash to verify served bytes."
 }

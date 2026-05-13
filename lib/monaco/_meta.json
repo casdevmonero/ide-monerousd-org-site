@@ -1,0 +1,10 @@
+{
+  "_comment": "Vendored Monaco editor. Populated by scripts/vendor-monaco.sh.",
+  "version":     "0.46.0",
+  "source":      "https://registry.npmjs.org/monaco-editor/-/monaco-editor-0.46.0.tgz",
+  "tarballSha256": "356c7fd408ed9acff9e6b28fb6b193204e82c9b87fe4c14c6ccbe74691586fcd",
+  "fileCount":   40,
+  "totalBytes":  12107687,
+  "trimmedLanguages": ["html","css","javascript","typescript","json"],
+  "workersDisabled": true
+}

@@ -263,6 +263,17 @@ async function openFile(path) {
 
   if (mode === 'monaco') {
     let m = models.get(path);
+    // If a fallback-shape entry got stored before Monaco finished
+    // mounting (mode was 'pending' at first openFile), upgrade it
+    // to a real Monaco ITextModel. Without this, every subsequent
+    // compile fails with `models.get(...)?.getValue is not a function`
+    // because Monaco's getValue() doesn't exist on the {value: '...'}
+    // placeholder object.
+    if (m && typeof m.getValue !== 'function') {
+      content = (typeof m.value === 'string' ? m.value : content);
+      models.delete(path);
+      m = null;
+    }
     if (!m) {
       const lang = languageFromPath(path);
       const uri  = monaco.Uri.parse(`inmemory://project/${encodeURIComponent(path)}`);
@@ -321,12 +332,27 @@ async function saveActive() {
   await saveFile(p.activeFile);
 }
 
+// Read a file's content from the model store regardless of how the
+// editor mode evolved across the file's lifetime. If `openFile`
+// fired before Monaco finished bootstrapping (mode === 'pending'),
+// the stored entry has the fallback `{value}` shape; after Monaco
+// flips, new entries are real ITextModel instances with `getValue`.
+// This helper accepts both — call sites that hard-cased on `mode`
+// were dropping content silently. Reference incident: trying to
+// compile a template that opened pre-Monaco-mount surfaced as
+// `models.get(...)?.getValue is not a function`.
+function readModelContent(path, fallbackText) {
+  const m = models.get(path);
+  if (!m) return fallbackText ?? '';
+  if (typeof m.getValue === 'function') return m.getValue();
+  if (typeof m.value === 'string')      return m.value;
+  return fallbackText ?? '';
+}
+
 async function saveFile(path) {
   const p = store.get('project');
   if (!p.id) return;  // No project yet — caller should create one first.
-  const content = (mode === 'monaco')
-    ? models.get(path)?.getValue() ?? ''
-    : models.get(path)?.value ?? dom.fallbackTa.value;
+  const content = readModelContent(path, dom.fallbackTa?.value);
   await idb.writeFile(p.id, path, content);
   const dirty = p.dirty instanceof Set ? new Set(p.dirty) : new Set(p.dirty || []);
   dirty.delete(path);
@@ -336,8 +362,7 @@ async function saveFile(path) {
 function getActiveContent() {
   const p = store.get('project');
   if (!p.activeFile) return '';
-  if (mode === 'monaco') return models.get(p.activeFile)?.getValue() ?? '';
-  return models.get(p.activeFile)?.value ?? dom.fallbackTa.value;
+  return readModelContent(p.activeFile, dom.fallbackTa?.value);
 }
 
 function getActiveLanguage() {
