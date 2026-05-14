@@ -444,8 +444,10 @@ dark contract AtomicSwapEscrow {
   public mapping(bytes => uint64)            swapState;
 
   // LP wallet identity — the wallet that called lock(). msg.sender at
-  // refund() must equal this value.
-  public mapping(bytes => wallet_identity)   swapLp;
+  // refund() must equal this value. Stored as bytes since msg.sender
+  // resolves to a 32-byte ed25519 pubkey (see DSOL compiler:
+  // exprType(msg.sender) === 'bytes').
+  public mapping(bytes => bytes)             swapLp;
 
   // LP's stealth subaddress to receive the wBTC on refund.
   public mapping(bytes => stealth)            swapLpStealth;
