@@ -1,7 +1,7 @@
 {
-  "version":   "1.2.212",
-  "rootHash":  "f1e8cf5b859a7b1f8c7616182e9bf5beff0e2cf2d24688466e8d041315df2a1b",
-  "bundleSize": 3568608,
+  "version":   "1.2.213",
+  "rootHash":  "22449bfda29844fd030685510c6ea81b0c29d2ae01d1e6eca4648cd63aad1c17",
+  "bundleSize": 3569052,
   "contentType": "spa",
   "fileCount":  105,
   "_comment": "Built by scripts/build-bundle.sh. SW-1 sovereign-server reads rootHash to verify served bytes."
