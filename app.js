@@ -315,6 +315,23 @@ dom.activity.addEventListener('click', (ev) => {
     setSideMobileOpen(true);
     return;
   }
+  // Desktop (≥768px). Tapping an activity:
+  //  • Swaps the active activity, AND
+  //  • If the side panel was collapsed (auto-collapsed under 900px, or
+  //    manually collapsed via the chevron toggle), pops it open. This
+  //    matches Remix IDE's behaviour — clicking an activity icon shows
+  //    its panel — and fixes the v1.2.213 ship-day bug where users on
+  //    narrow viewports (700–900 px) clicked Deploy and saw no Deploy
+  //    panel because the side was stuck at 1 px wide.
+  //  • If the SAME activity is re-clicked AND the panel is already
+  //    visible, toggle collapse (parallels the mobile-drawer behaviour
+  //    above and matches VSCode's activity-bar shortcut).
+  const sideCollapsed = store.get('ui').sideCollapsed;
+  if (wasActive && !sideCollapsed) {
+    setSideCollapsed(true);
+    return;
+  }
+  if (sideCollapsed) setSideCollapsed(false);
   activateActivity(activity);
 });
 
