@@ -415,3 +415,180 @@
   margin-top: 16px;
   flex-wrap: wrap;
 }
+
+/* ─── Pre-deploy preview modal — Remix-style ─────────────────────────────
+ *
+ * Rendered by `pages/deploy.js::openDeployPreviewModal()`. Surfaces
+ * the codeHash + bytecode size + bond + constructor-arg inputs BEFORE
+ * the wallet's approval popup fires. IDE-9 still holds — this is a
+ * preview/confirmation step, not a substitute for the wallet popup.
+ */
+
+.deploy-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 0;
+}
+
+.deploy-preview-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.deploy-preview-name {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+
+.deploy-preview-kind {
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.deploy-preview-meta {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 16px;
+  margin: 0;
+  padding: 12px 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-sm);
+}
+
+.deploy-preview-meta dt {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.deploy-preview-meta dd {
+  margin: 0;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.deploy-preview-meta dd code {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.01em;
+  color: var(--accent);
+}
+
+.deploy-preview-meta .entry-list {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  margin-left: 4px;
+}
+
+.deploy-preview-ctor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--bg-popover);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  margin: 0;
+}
+
+.deploy-preview-ctor legend {
+  padding: 0 6px;
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.ctor-arg {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) max-content;
+  align-items: center;
+  gap: 4px 12px;
+}
+
+.ctor-arg-name {
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+}
+
+.ctor-arg-type {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  text-transform: lowercase;
+  justify-self: end;
+}
+
+.ctor-arg input[data-ctor-arg] {
+  grid-column: 1 / -1;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  outline: none;
+  transition: border-color 120ms ease-out, box-shadow 120ms ease-out;
+}
+
+.ctor-arg input[data-ctor-arg]:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.ctor-note {
+  margin: 4px 0 0;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.deploy-preview-bond {
+  padding: 12px 14px;
+  background: linear-gradient(135deg,
+    rgba(255, 102, 0, 0.10) 0%,
+    rgba(255, 102, 0, 0.04) 100%);
+  border: 1px solid rgba(255, 102, 0, 0.20);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+}
+
+.deploy-preview-bond strong {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.deploy-preview-bond-note {
+  margin-top: 4px;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.deploy-preview-trust {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.deploy-preview-error {
+  padding: 8px 12px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: var(--radius-sm);
+  color: var(--danger);
+  font-size: var(--fs-xs);
+}

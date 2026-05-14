@@ -37,7 +37,17 @@ let activated = false;
 export async function activate({ sideEl, pluginEl }) {
   if (!activated) {
     // Re-render on project changes (file tree, dirty flags, active file).
-    store.subscribe('project', () => renderSide());
+    // CRITICAL: guard on `activeActivity === 'files'`. renderSide() is
+    // async (it awaits IDB for the Recent Projects list), so an
+    // unguarded subscription would overwrite the side panel AFTER
+    // the user has navigated away to another activity. That's how
+    // the site-preview e2e started showing Templates content after
+    // we added Recent Projects in v1.2.211.
+    store.subscribe('project', () => {
+      if (store.get('ui').activeActivity === 'files') {
+        void renderSide();
+      }
+    });
     activated = true;
   }
   setSideHeader('Files');
@@ -50,8 +60,14 @@ export async function activate({ sideEl, pluginEl }) {
 
 async function renderSide() {
   const p = store.get('project');
+  // The recent-projects panel is rendered in both branches so users
+  // always have one-click switching between projects (Remix-style).
+  // The IDB list is bounded by how many projects the user has ever
+  // created in this browser — typical <20, fast to load.
+  const recentsHtml = await renderRecentProjectsSection(p.id);
+
   if (!p.id) {
-    setSidePanelContent(emptySideHtml());
+    setSidePanelContent(emptySideHtml(recentsHtml));
     // Empty-state CTAs reuse the same data-action values as the
     // non-empty branch (`files-newproject`, `files-templates`,
     // `files-import`). They MUST be wired here too — otherwise they're
@@ -88,6 +104,7 @@ async function renderSide() {
       <div class="files-tree" role="tree" aria-label="Project files">
         ${renderTree(tree, '', p.activeFile, dirty)}
       </div>
+      ${recentsHtml}
       <div class="files-projectactions">
         <button data-action="files-templates"  class="btn-link" title="Open templates gallery">Browse templates →</button>
         <button data-action="files-import"     class="btn-link" title="Import .dsproj">Import .dsproj…</button>
@@ -116,6 +133,19 @@ function wireSideHandlers() {
   root.querySelectorAll('[data-action="files-templates"]').forEach(b => b.addEventListener('click', () => activateActivity('templates')));
   root.querySelectorAll('[data-action="files-newproject"]').forEach(b => b.addEventListener('click', promptForNewProject));
   root.querySelectorAll('[data-action="files-deleteproj"]').forEach(b => b.addEventListener('click', deleteCurrentProject));
+  // Recent-projects rows: switching projects is async (it has to
+  // open the IDB-stored active file in Monaco), so we route through
+  // switchToProject() which surfaces a toast + reroutes errors to
+  // the toast pipeline rather than bubbling.
+  root.querySelectorAll('[data-action="files-open-recent"]').forEach(b => {
+    b.addEventListener('click', () => switchToProject(b.dataset.projectId));
+  });
+  root.querySelectorAll('[data-action="files-forget-recent"]').forEach(b => {
+    b.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      forgetProject(b.dataset.projectId);
+    });
+  });
 }
 
 /* Wire the file tree's per-row click + context menu. Only meaningful
@@ -137,7 +167,7 @@ function wireFileTreeHandlers() {
   });
 }
 
-function emptySideHtml() {
+function emptySideHtml(recentsHtml = '') {
   return `
     <div class="files-empty">
       <div class="files-empty-illus" aria-hidden="true">
@@ -153,8 +183,190 @@ function emptySideHtml() {
         <button data-action="files-templates"  class="btn btn-secondary btn-sm">${ICON_TEMPLATE}<span>Templates</span></button>
         <button data-action="files-import"     class="btn btn-secondary btn-sm">${ICON_UPLOAD}<span>Import .dsproj</span></button>
       </div>
+      ${recentsHtml}
     </div>
   `;
+}
+
+/* ─── Recent projects ──────────────────────────────────────────────────── */
+
+/**
+ * Render the "Recent projects" panel. Pulls every project from IDB,
+ * sorts by `updatedAt desc`, and shows up to RECENT_LIMIT entries
+ * (excluding the currently-open project — that one is already
+ * indicated by the file tree above).
+ *
+ * Returns an empty string when there are no other projects so the
+ * panel doesn't render an awkward "0 recent" header.
+ *
+ * Remix parallel: the "Recent" section under the File Explorer
+ * activity. We deliberately omit "last modified" timestamps in
+ * favor of an inline relative-time string ("2m ago", "yesterday")
+ * — the absolute timestamp adds noise without information.
+ */
+const RECENT_LIMIT = 6;
+async function renderRecentProjectsSection(excludeProjectId) {
+  let list;
+  try {
+    list = await idb.listProjects();
+  } catch {
+    return '';
+  }
+  const others = (list || [])
+    .filter(x => x && x.id && x.id !== excludeProjectId)
+    .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
+    .slice(0, RECENT_LIMIT);
+  if (!others.length) return '';
+
+  const rows = others.map(p => `
+    <div class="files-recent-row" data-action="files-open-recent" data-project-id="${escapeAttr(p.id)}" role="button" tabindex="0" title="Open ${escapeAttr(p.name)}">
+      <span class="files-recent-icon">${kindIcon(p.kind)}</span>
+      <span class="files-recent-text">
+        <span class="files-recent-name">${escapeHtml(p.name || 'Untitled')}</span>
+        <span class="files-recent-meta">
+          <span class="files-recent-kind">${escapeHtml(p.kind || 'contract')}</span>
+          <span class="files-recent-time">${relativeTime(p.updatedAt)}</span>
+        </span>
+      </span>
+      <button class="files-recent-forget" data-action="files-forget-recent" data-project-id="${escapeAttr(p.id)}" title="Remove from this browser" aria-label="Forget project">${ICON_X}</button>
+    </div>
+  `).join('');
+
+  return `
+    <div class="files-recent">
+      <div class="files-recent-head">
+        <span>Recent projects</span>
+        <span class="muted">${others.length}</span>
+      </div>
+      <div class="files-recent-list" role="list">
+        ${rows}
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Open a project from the recents list. Mirrors the open path
+ * createProjectFromTemplate() takes on creation, minus the
+ * file-seeding step (the files already exist in IDB). Used by both
+ * the Files activity recent-projects panel and any future Cmd+P
+ * project-switcher.
+ */
+async function switchToProject(projectId) {
+  if (!projectId) return;
+  // Quick guard: if the user clicked the active project's row by
+  // accident (shouldn't be rendered, but defense-in-depth), no-op.
+  const current = store.get('project');
+  if (current.id === projectId) return;
+
+  let proj;
+  try {
+    proj = await idb.getProject(projectId);
+  } catch (err) {
+    showToast({ kind: 'error', title: 'Open failed', body: err.message });
+    return;
+  }
+  if (!proj) {
+    showToast({ kind: 'warning', title: 'Project not found', body: 'It may have been deleted in another tab.' });
+    // Re-render the recents panel so the stale entry disappears.
+    await renderSide();
+    return;
+  }
+
+  // Close any open Monaco models from the previous project so we
+  // don't leak content into the new project's editor surface. The
+  // editor.js helper is no-op when files.length is 0.
+  const prevOpen = (current.openFiles || []).slice();
+  for (const f of prevOpen) {
+    try { await editorApi().closeFile(f); } catch { /* tolerate */ }
+  }
+
+  idb.setCurrentProjectId(proj.id);
+  // List files so the in-store view reflects what IDB owns.
+  let files;
+  try {
+    files = await idb.listFiles(proj.id);
+  } catch {
+    files = [];
+  }
+  store.replace('project', {
+    id: proj.id,
+    name: proj.name,
+    kind: proj.kind || 'contract',
+    activeFile: proj.activeFile || null,
+    openFiles: proj.activeFile ? [proj.activeFile] : [],
+    files: files.map(f => ({ path: f.path, mtime: f.mtime })),
+    dirty: new Set(),
+  });
+  if (proj.activeFile) {
+    try { await editorApi().openFile(proj.activeFile); }
+    catch (err) { terminalApi().warn(`Could not reopen ${proj.activeFile}: ${err.message}`); }
+  }
+  await refreshProjectFiles();
+  // Touch updatedAt so the just-opened project floats to the top
+  // of the recents list next time the panel renders.
+  idb.updateProject(proj.id, { updatedAt: Date.now() }).catch(() => null);
+
+  terminalApi().success(`Opened "${proj.name}"`);
+  showToast({ kind: 'info', title: 'Project opened', body: proj.name });
+}
+
+/**
+ * Remove a project from the recents list (and from IDB).
+ * Deliberately bypasses the deleteCurrentProject() flow because
+ * the project may not be the active one — we can't assume
+ * `store.get('project').id === projectId`.
+ */
+async function forgetProject(projectId) {
+  if (!projectId) return;
+  const proj = await idb.getProject(projectId).catch(() => null);
+  if (!proj) {
+    await renderSide();
+    return;
+  }
+  const ok = await confirmModal({
+    title: 'Forget project?',
+    body: `<p>Remove <strong>${escapeHtml(proj.name)}</strong> from this browser permanently.</p>
+           <p style="color:var(--text-muted);font-size:var(--fs-xs);">Deployed contracts on chain are unaffected. Export with .dsproj first if you want a backup.</p>`,
+    danger: true,
+    confirmLabel: 'Forget',
+  });
+  if (!ok) return;
+  try {
+    await idb.deleteProject(projectId);
+    showToast({ kind: 'info', title: 'Project removed' });
+    await renderSide();
+  } catch (err) {
+    showToast({ kind: 'error', title: 'Remove failed', body: err.message });
+  }
+}
+
+/**
+ * "2m ago" / "yesterday" / "Mar 12" style timestamps. Avoids a
+ * dependency for what is fundamentally six conditional branches.
+ */
+function relativeTime(ts) {
+  if (!ts) return '';
+  const now = Date.now();
+  const diff = Math.max(0, now - ts);
+  const sec  = Math.floor(diff / 1000);
+  const min  = Math.floor(sec / 60);
+  const hr   = Math.floor(min / 60);
+  const day  = Math.floor(hr / 24);
+  if (sec < 30)  return 'just now';
+  if (min < 1)   return `${sec}s ago`;
+  if (hr < 1)    return `${min}m ago`;
+  if (day < 1)   return `${hr}h ago`;
+  if (day < 2)   return 'yesterday';
+  if (day < 7)   return `${day}d ago`;
+  // Anything older shows a short date.
+  return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function kindIcon(kind) {
+  if (kind === 'site')  return ICON_GLOBE;
+  if (kind === 'mixed') return ICON_LAYERS;
+  return ICON_HEXAGON; // 'contract' (default)
 }
 
 /* ─── Plugin (inspector) ────────────────────────────────────────────────── */
@@ -581,6 +793,19 @@ export async function exportProject() {
 }
 
 export async function importProject() {
+  // CLAUDE.md rule 23 ("every UI action must broadcast or explain"):
+  // surface a toast IMMEDIATELY on click so the user knows the
+  // picker fired. Without this, clicking "Import .dsproj" opens
+  // the native OS file dialog, which is outside the DOM — if the
+  // OS dialog is slow to surface OR the user cancels, the click
+  // produces zero observable feedback (the exact dead-button class
+  // the runtime spec at tests/e2e/runtime-dead-buttons.spec.js
+  // catches).
+  showToast({
+    kind: 'info',
+    title: 'Pick a .dsproj file',
+    body: 'Choose the archive to import. Cancel the file picker to abort.',
+  });
   const inp = document.createElement('input');
   inp.type = 'file';
   inp.accept = '.dsproj,.tar.gz,application/gzip';
@@ -709,3 +934,7 @@ const ICON_UPLOAD   = '<svg viewBox="0 0 24 24" width="14" height="14" fill="non
 const ICON_DOWNLOAD = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v12M6 10l6 6 6-6M4 20h16"/></svg>';
 const ICON_FOLDER   = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z"/></svg>';
 const ICON_TEMPLATE = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>';
+const ICON_HEXAGON  = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#FF6600" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l9 5v10l-9 5-9-5V7l9-5z"/></svg>';
+const ICON_GLOBE    = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18 14 14 0 010-18z"/></svg>';
+const ICON_LAYERS   = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#a78bfa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5M3 18l9 5 9-5"/></svg>';
+const ICON_X        = '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';

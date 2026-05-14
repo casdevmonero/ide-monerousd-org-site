@@ -306,6 +306,209 @@ function renderCallCard(contract, fn) {
 
 /* ─── Actions ────────────────────────────────────────────────────────── */
 
+/**
+ * Pre-deploy preview modal — Remix-style.
+ *
+ * User clicks "Deploy on-chain" → this modal opens FIRST, showing
+ * the contract metadata + bond preview. They have a chance to verify
+ * the codeHash matches what they expected BEFORE the wallet's
+ * approval popup lands. Click Deploy in the modal → resolves with
+ * the collected constructor args (if any), and doDeploy proceeds to
+ * call provider.deployContract().
+ *
+ * Returns Promise<{ args: any[] } | null> — null on user cancel.
+ *
+ * IDE-9 note: this is NOT a substitute for the wallet's approval
+ * popup. It's a PRE-CHECK so the user can sanity-test the bytecode
+ * + codeHash against what they expect before signing. The wallet's
+ * buildOpFields('DC_DEPLOY') case is still what gates the actual
+ * signature; this is a courtesy preview.
+ */
+function openDeployPreviewModal({ compile, name }) {
+  return new Promise((resolve) => {
+    const entrypoints = compile.abi?.entrypoints || [];
+    const ctor = entrypoints.find(e => e.name === 'constructor');
+    const ctorArgs = ctor?.args || [];
+
+    const fnsExceptCtor = entrypoints.filter(e => e.name !== 'constructor');
+    const entrySummary = fnsExceptCtor.length
+      ? fnsExceptCtor.map(e => e.name).join(', ')
+      : 'none';
+
+    const codeHashFull = compile.codeHash || '';
+    const codeHashShort = truncMiddle(codeHashFull, 12, 8);
+
+    const ctorInputsHtml = ctorArgs.length === 0 ? '' : `
+      <fieldset class="deploy-preview-ctor">
+        <legend>Constructor arguments</legend>
+        ${ctorArgs.map((arg, i) => `
+          <label class="ctor-arg">
+            <span class="ctor-arg-name">${escapeHtml(arg.name)}</span>
+            <span class="ctor-arg-type">${escapeHtml(arg.type)}</span>
+            <input
+              type="text"
+              data-ctor-arg="${i}"
+              data-ctor-type="${escapeAttr(arg.type)}"
+              placeholder="${escapeAttr(placeholderFor(arg.type))}"
+              autocomplete="off"
+              spellcheck="false"
+            />
+          </label>
+        `).join('')}
+        <p class="ctor-note">
+          These values are passed verbatim to the contract's constructor.
+          They are also visible in the wallet's approval popup. Constructor
+          args ride in the same DC_DEPLOY attestation as the bytecode.
+        </p>
+      </fieldset>
+    `;
+
+    const body = `
+      <div class="deploy-preview">
+        <header class="deploy-preview-head">
+          <div class="deploy-preview-name">${escapeHtml(name)}</div>
+          <div class="deploy-preview-kind">Dark Contract · v1</div>
+        </header>
+
+        <dl class="deploy-preview-meta">
+          <dt>Code hash</dt>
+          <dd><code title="${escapeAttr(codeHashFull)}">${escapeHtml(codeHashShort)}</code></dd>
+          <dt>Bytecode</dt>
+          <dd>${compile.bytecode.length.toLocaleString()} bytes</dd>
+          <dt>Entrypoints</dt>
+          <dd>${fnsExceptCtor.length} <span class="entry-list">(${escapeHtml(entrySummary)})</span></dd>
+        </dl>
+
+        ${ctorInputsHtml}
+
+        <div class="deploy-preview-bond">
+          <strong>Deployment bond:</strong> 10 USDm
+          <div class="deploy-preview-bond-note">
+            100% routes to the protocol reserve. Non-refundable. The bond
+            charge is part of the carrier tx your wallet signs next.
+          </div>
+        </div>
+
+        <p class="deploy-preview-trust">
+          Your wallet will show an approval popup with this exact code
+          hash — verify the prefix matches before approving. If it
+          doesn't, reject the popup.
+        </p>
+
+        <div class="deploy-preview-error" hidden></div>
+      </div>
+    `;
+
+    showModal({
+      title: 'Deploy ' + name + ' on-chain',
+      size: 'md',
+      body,
+      onClose: () => { try { resolve(null); } catch (_) {} },
+      actions: [
+        {
+          label: 'Cancel',
+          kind: 'secondary',
+          dataAct: 'deploy-preview-cancel',
+          onClick: ({ hide }) => {
+            // `silent:true` skips the onClose handler so we don't
+            // double-resolve the promise (onClose resolves with null
+            // FIRST, beating any later resolve({args}) — exactly the
+            // bug that made the v1.2.211 modal silently skip the
+            // wallet popup before this fix landed).
+            hide({ silent: true });
+            resolve(null);
+          },
+        },
+        {
+          label: 'Deploy on-chain',
+          kind: 'primary',
+          dataAct: 'deploy-preview-confirm',
+          onClick: ({ hide }) => {
+            // Collect constructor args (if any). Validate non-empty
+            // strings; surface a single-line error inline if missing.
+            const inputs = Array.from(document.querySelectorAll('[data-ctor-arg]'));
+            const args = [];
+            const errors = [];
+            for (const inp of inputs) {
+              const idx = Number(inp.dataset.ctorArg);
+              const ty = inp.dataset.ctorType;
+              const raw = (inp.value || '').trim();
+              if (!raw) {
+                errors.push(`${ctorArgs[idx]?.name || ('arg ' + idx)} (${ty}) is required`);
+                continue;
+              }
+              try {
+                args.push(parseCtorArg(raw, ty));
+              } catch (err) {
+                errors.push(`${ctorArgs[idx]?.name}: ${err.message}`);
+              }
+            }
+            if (errors.length) {
+              const errBox = document.querySelector('.deploy-preview-error');
+              if (errBox) {
+                errBox.hidden = false;
+                errBox.textContent = errors.join(' · ');
+              }
+              return; // keep modal open
+            }
+            // Resolve FIRST, then hide with silent:true so the
+            // modal's onClose handler can't race ahead and resolve
+            // the promise with null. The native Promise contract
+            // makes the first resolve() win, but the order here
+            // is structurally important: a future maintainer who
+            // removes the silent:true would re-introduce the
+            // v1.2.211 ship-day bug (Deploy modal would close but
+            // the wallet popup would never fire).
+            resolve({ args });
+            hide({ silent: true });
+          },
+        },
+      ],
+    });
+  });
+}
+
+function placeholderFor(type) {
+  switch (type) {
+    case 'string':          return 'e.g. SYMBOL';
+    case 'uint64':
+    case 'uint8':
+    case 'int64':           return 'positive integer';
+    case 'bool':            return 'true / false';
+    case 'stealth':         return 'recipient base58 address';
+    case 'wallet_identity': return '64-char hex pubkey';
+    case 'bytes':           return 'hex-encoded bytes';
+    default:                return type;
+  }
+}
+
+function parseCtorArg(raw, type) {
+  switch (type) {
+    case 'string':          return raw;
+    case 'uint64':
+    case 'uint8':
+    case 'int64': {
+      if (!/^[0-9]+$/.test(raw)) throw new Error('must be a non-negative integer');
+      return raw; // pass as decimal-string so amounts > 2^53 round-trip cleanly
+    }
+    case 'bool': {
+      const v = raw.toLowerCase();
+      if (v === 'true' || v === '1') return true;
+      if (v === 'false' || v === '0') return false;
+      throw new Error('must be true or false');
+    }
+    case 'stealth':         return raw;
+    case 'wallet_identity':
+    case 'bytes': {
+      const v = raw.replace(/^0x/, '').toLowerCase();
+      if (!/^[0-9a-f]*$/.test(v)) throw new Error('must be hex');
+      if (v.length % 2 !== 0) throw new Error('hex length must be even');
+      return v;
+    }
+    default:                return raw;
+  }
+}
+
 async function doDeploy() {
   const compile = store.get('compile');
   if (compile.status !== 'ok') {
@@ -318,8 +521,19 @@ async function doDeploy() {
     return;
   }
   const name = compile.abi?.name || 'Contract';
+
+  // Pre-deploy preview modal — Remix-style. User confirms metadata
+  // + provides any constructor args before the wallet popup fires.
+  const previewResult = await openDeployPreviewModal({ compile, name });
+  if (previewResult === null) {
+    terminalApi().info('Deploy canceled in preview modal.');
+    return;
+  }
+  const constructorArgs = previewResult.args || [];
+
   showToast({ kind: 'info', title: `Deploying ${name}…`, body: 'Approve in your wallet popup.' });
-  terminalApi().info(`Deploy → wallet popup for ${name} (${compile.bytecode.length} B, codeHash ${truncMiddle(compile.codeHash, 8, 4)})`);
+  terminalApi().info(`Deploy → wallet popup for ${name} (${compile.bytecode.length} B, codeHash ${truncMiddle(compile.codeHash, 8, 4)})`
+    + (constructorArgs.length ? ` constructor(${constructorArgs.length} arg${constructorArgs.length === 1 ? '' : 's'})` : ''));
 
   // ──────── deploy with daemon-disconnect retry ────────
   // The wallet's wallet-rpc has a stalled-keep-alive failure mode
@@ -334,6 +548,7 @@ async function doDeploy() {
         abi:      compile.abi,
         codeHash: compile.codeHash,
         name,
+        constructorArgs,
       });
     } catch (err) {
       const msg = String(err?.message || err || '');

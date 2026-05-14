@@ -61,6 +61,13 @@ export function showModal({ title = '', body = '', actions = [], onClose, size =
     btn.className = `btn btn-${a.kind || 'secondary'}`;
     btn.textContent = a.label;
     if (a.disabled) btn.disabled = true;
+    // Allow callers to pin a `data-act` for tests / external CSS
+    // hooks without having to grovel through textContent matches.
+    // Used by the deploy-preview modal (see pages/deploy.js) so the
+    // ship-day Playwright spec can click the modal's confirm button
+    // unambiguously even when the side-panel has its own
+    // `Deploy on-chain` button with the same label.
+    if (a.dataAct) btn.dataset.act = a.dataAct;
     btn.addEventListener('click', () => {
       try { a.onClick?.({ hide: hideModal }); } catch (err) { console.error(err); }
     });
