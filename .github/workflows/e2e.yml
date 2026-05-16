@@ -1,0 +1,95 @@
+# MoneroUSD IDE — Playwright e2e CI workflow.
+#
+# Tier 4 / L3 — runs the full Playwright suite on every push to
+# main + every PR. The suite exercises the IDE's user-facing flows
+# (connect/disconnect, compile→deploy popup, call-entrypoint popup,
+# publish-site popup, local-VM run, template gallery, project CRUD,
+# keyboard shortcuts, visual regression, clearnet-local parity).
+#
+# What this enforces
+#   • A code change that breaks the wallet provider integration
+#     fails the connect-disconnect spec.
+#   • A code change that breaks the approval-modal popup parity
+#     (rule IDE-9) fails the compile-deploy / call-entrypoint /
+#     publish-site specs.
+#   • A code change that breaks the bundle parity between
+#     ide.monerousd.org and the wallet's T1 mirror (rule IDE-11)
+#     fails the clearnet-local-parity spec.
+#
+# Operator notes
+#   This workflow uses GitHub Actions' ubuntu-latest runner. If the
+#   project moves to self-hosted runners, change `runs-on:` and add
+#   any required browser dependencies the runner image is missing
+#   (Playwright's `npx playwright install --with-deps chromium`
+#   handles most of it on cloud runners).
+
+name: e2e
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Concurrency — cancel in-progress runs on the same ref so a fast
+# follow-up commit doesn't queue behind a stale run.
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  playwright:
+    name: Playwright (Chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Install Playwright browsers
+        # `--with-deps` pulls the OS-level libs Chromium needs (libnss3,
+        # libatk-bridge etc.) so the test browser actually launches on a
+        # headless ubuntu-latest. Skip this and the suite fails with
+        # `browserType.launch: Failed to launch chromium`.
+        run: npx playwright install --with-deps chromium
+
+      - name: Run unit + static guards first
+        # If the static guards (no-cdn, no-unsafe-eval, vm-mirror-parity,
+        # compiler-parity, fee-curve-parity) fail, there's no point
+        # spending 5 minutes on Playwright. Bail early.
+        run: npm test
+
+      - name: Run Playwright e2e suite
+        run: npm run test:e2e
+        env:
+          # Stub-wallet mode — Playwright tests inject a controlled
+          # `window.monerousd` provider rather than connecting to a
+          # real wallet. The flag tells the test harness to skip
+          # broadcasts that would need a live USDmd chain.
+          IDE_E2E_STUB_WALLET: '1'
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Upload visual-regression diffs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-regression-diffs
+          path: tests/e2e/visual-regression.spec.js-snapshots/
+          retention-days: 7

@@ -148,10 +148,35 @@
 }
 .editor-empty .editor-empty-shortcuts {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 24px;
   margin-top: 12px;
   font-size: var(--fs-xs);
   color: var(--text-muted);
+  padding: 0 18px;
+  max-width: 720px;
+}
+
+/* On mobile the shortcut cluster wraps cleanly with each row centered,
+   rather than being squeezed horizontally into a 1-line strip that
+   overflows the editor area. Phones get tighter spacing + a narrower
+   max-width so the three chips don't dominate the empty state. */
+@media (max-width: 768px) {
+  .editor-empty {
+    gap: 12px;
+    padding: 0 14px;
+  }
+  .editor-empty img {
+    width: 72px;
+    height: 72px;
+  }
+  .editor-empty .editor-empty-title { font-size: var(--fs-md); }
+  .editor-empty .editor-empty-hint { font-size: var(--fs-xs); text-align: center; }
+  .editor-empty .editor-empty-shortcuts {
+    gap: 10px 16px;
+    font-size: 10px;
+  }
 }
 .editor-empty kbd {
   display: inline-block;
@@ -384,6 +409,36 @@
   white-space: pre;
 }
 
+/* Deploy panel — list head shows "Deployed contracts <count>".
+ * Without explicit flex + gap the two spans render glued together
+ * ("Deployed contracts0") which reads as a typo. */
+.deploy-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+  padding: 6px 0;
+  margin: 10px 0 4px;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 14px;
+}
+.deploy-list-head .muted {
+  font-weight: 500;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.deploy-list-empty {
+  padding: 16px 8px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+.deploy-list-empty p { margin: 4px 0; }
+
 /* Inline mono emphasis (hashes, addresses, opcodes) */
 .mono-pill {
   display: inline-block;
@@ -394,4 +449,163 @@
   padding: 2px 6px;
   border-radius: var(--radius-sm);
   letter-spacing: 0.01em;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ * Mobile polish (≤ 768 px)
+ *
+ * The page-content area hosts every non-editor activity: Templates,
+ * Reference, Settings, Run, Deploy, Site Preview. Each of those
+ * sub-pages picks up its own per-page class (.templates-page,
+ * .reference-page, .settings-page, …) and historically had a fat
+ * 24 × 32 px padding plus a multi-column grid that didn't fit a
+ * 375 px viewport.
+ *
+ * Rules below collapse padding, force-single-column the grids, and
+ * shrink the heading scale so everything fits without horizontal
+ * scroll. Per-page tweaks come after the global block.
+ * ═══════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  /* page-content host */
+  .page-content {
+    padding: 14px 12px 20px;
+  }
+  .page-content h1 {
+    font-size: var(--fs-xl);
+    margin-bottom: 4px;
+  }
+  .page-content h2 { font-size: var(--fs-lg); margin: 18px 0 8px; }
+  .page-content h3 { font-size: var(--fs-md); margin: 14px 0 6px; }
+  .page-content .lead {
+    font-size: var(--fs-sm);
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+  .page-content section { margin-bottom: 22px; }
+  .page-content .section-row { gap: 8px; margin-bottom: 12px; }
+
+  /* Every per-page section: drop the heavy desktop padding. The
+     page-content host already supplies the outer 12–14 px gutter. */
+  .templates-page,
+  .reference-page,
+  .settings-page,
+  .run-page,
+  .deploy-page,
+  .compiler-page,
+  .site-preview-page {
+    padding: 0;
+    gap: 14px;
+  }
+  .templates-page > header h2,
+  .templates-page > header > h1,
+  .page-section > header h1 {
+    font-size: var(--fs-xl);
+    line-height: 1.2;
+  }
+  .templates-page > header p,
+  .page-section > header p {
+    font-size: var(--fs-sm);
+    line-height: 1.5;
+  }
+
+  /* Single-column grids — cards take the full width on phones. */
+  .templates-grid,
+  .template-gallery {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .template-card {
+    padding: 14px 14px 12px;
+    gap: 8px;
+  }
+
+  /* Buttons inside page-content rows wrap naturally. Primary actions
+     keep full-width on phones so they're easy to tap. */
+  .page-content .actions,
+  .page-content .button-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .page-content .actions .btn-primary,
+  .page-content .button-row .btn-primary {
+    flex: 1 1 200px;
+  }
+
+  /* Cards / kv-rows inside page-content already wrap; tighten their
+     padding so they don't crowd the viewport. */
+  .page-content .card { padding: 14px; }
+  .page-content .codeblock { font-size: 11px; padding: 10px 12px; }
+
+  /* Form rows: labels stack above inputs (they already do via the
+     default flex-column shape — just tighten paddings). */
+  .form-row { margin-bottom: 12px; }
+  .form-row input,
+  .form-row select,
+  .form-row textarea {
+    font-size: 14px;        /* 14 px stops iOS Safari from zooming on focus */
+  }
+
+  /* Mono / hash strings inside page-content wrap to fit the column. */
+  .page-content .mono,
+  .page-content .mono-pill {
+    word-break: break-all;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* ─── Compiler / Deploy / Run side-drawer content (≤ 768) ─────── */
+
+@media (max-width: 768px) {
+  /* The Compiler / Run / Deploy "tab" content gets rendered inside
+     the mobile side-drawer when active. Tighten its padding so the
+     drawer doesn't waste 24 px of every side. */
+  .side .compiler-panel,
+  .side .deploy-panel,
+  .side .run-panel,
+  .side .site-panel,
+  .side > .side-content {
+    padding: 12px;
+  }
+  /* Action rows inside each panel: explicit flex + gap + wrap so
+     buttons don't blow past the drawer width. Pre-fix the row
+     used default browser layout which collapsed two pill buttons
+     onto one line that overflowed to the right edge.
+     IMPORTANT: scope to `.side-content` only — we MUST NOT match
+     `.side-header-actions` (the 28-px + / < icon pair in the
+     drawer header), or those tiny icons get full-width
+     stretched and stacked onto two rows. */
+  .side-content [class*="-actions"],
+  .side-content [class*="-cta"],
+  .side-content [class*="-conn"],
+  .side-content [class*="-row"],
+  .side-content [class*="-bar"] {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  /* Every button inside any of those rows takes the full drawer
+     width. Tap targets match Apple HIG (44+ px). */
+  .side-content [class*="-actions"] > .btn,
+  .side-content [class*="-actions"] > button,
+  .side-content [class*="-cta"] > .btn,
+  .side-content [class*="-cta"] > button,
+  .side-content [class*="-conn"] > .btn,
+  .side-content [class*="-conn"] > button {
+    flex: 1 1 100%;
+    justify-content: center;
+    width: 100%;
+    min-height: 40px;
+  }
+  /* Headings / paragraphs inside the side panels are tighter on
+     phones — they don't compete with the editor for real estate. */
+  .side h3, .side h4 { font-size: var(--fs-md); margin: 4px 0 8px; }
+  .side p { font-size: var(--fs-sm); line-height: 1.5; }
+
+  /* Side panel form inputs match page-content inputs (no iOS zoom). */
+  .side input,
+  .side select,
+  .side textarea { font-size: 14px; }
 }

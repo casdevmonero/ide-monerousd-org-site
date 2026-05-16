@@ -305,3 +305,206 @@
   width: 30px;
   height: 30px;
 }
+
+/* ──────────────────────────────────────────────────────────────────────
+ * Reference side panel — styles for `pages/reference.js`'s doc picker
+ * (DSOL Language / Dark Contracts ABI / Sovereign Sites ABI / Changelog)
+ * and the per-doc table-of-contents that follows it.
+ *
+ * Pre-fix these classes had no styles, so the buttons flowed inline
+ * and the TOC anchors ran together as one block of text — illegible
+ * on mobile AND desktop. Adding the styles here (in the same file
+ * as the Templates side panel) keeps the side-content surface
+ * consistent across activities.
+ * ────────────────────────────────────────────────────────────────────── */
+
+.reference-side {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 14px 12px 24px;
+}
+
+.ref-doc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ref-doc {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  color: var(--text-primary);
+  font-family: inherit;
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease-out),
+              border-color var(--t-fast) var(--ease-out);
+}
+
+.ref-doc:hover {
+  background: var(--bg-hover, rgba(255, 255, 255, 0.04));
+  border-color: var(--border-subtle);
+}
+
+.ref-doc.active {
+  background: var(--accent-soft, rgba(255, 102, 0, 0.10));
+  border-color: rgba(255, 102, 0, 0.30);
+}
+
+.ref-doc-label {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.ref-doc-blurb {
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin-top: 2px;
+}
+
+.ref-toc-section .section-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 8px;
+  padding: 0 4px;
+}
+
+.ref-toc {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ref-toc-item {
+  display: block;
+  padding: 6px 10px;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  line-height: 1.3;
+  transition: background var(--t-fast) var(--ease-out),
+              color var(--t-fast) var(--ease-out);
+}
+
+.ref-toc-item:hover {
+  background: var(--bg-hover, rgba(255, 255, 255, 0.03));
+  color: var(--text-primary);
+}
+
+.ref-toc-l1 { padding-left: 10px; font-weight: 600; color: var(--text-primary); }
+.ref-toc-l2 { padding-left: 18px; }
+.ref-toc-l3 { padding-left: 28px; font-size: var(--fs-xs); }
+.ref-toc-l4,
+.ref-toc-l5,
+.ref-toc-l6 { padding-left: 36px; font-size: var(--fs-xs); }
+
+.ref-toc-empty {
+  padding: 8px 10px;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+/* Reference page (the article body in the editor-area) gets a comfortable
+ * reading width on wide screens, then expands to full-width on mobile so
+ * code blocks don't horizontal-scroll inside a constrained column.
+ */
+.reference-page {
+  padding: 24px 32px 48px;
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.reference-head {
+  margin-bottom: 14px;
+}
+
+@media (max-width: 768px) {
+  .reference-page {
+    padding: 16px 14px 36px;
+  }
+  .reference-side {
+    padding: 12px 10px 20px;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+ * Settings side panel — styles for `pages/settings.js`'s section
+ * picker (Indexer / Editor / Storage / Keyboard / About). Same
+ * pattern as `.ref-doc`: a button with a bold label + muted blurb,
+ * stacked vertically, with an orange accent on the active section.
+ *
+ * Pre-fix the buttons had no styles and flowed inline as a wall of
+ * comma-separated text. Tested with the same browser-preview pass
+ * that fixed the Reference side panel.
+ * ────────────────────────────────────────────────────────────────────── */
+
+.settings-side {
+  display: flex;
+  flex-direction: column;
+  padding: 14px 12px 24px;
+}
+
+.settings-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  color: var(--text-primary);
+  font-family: inherit;
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease-out),
+              border-color var(--t-fast) var(--ease-out);
+}
+
+.settings-item:hover {
+  background: var(--bg-hover, rgba(255, 255, 255, 0.04));
+  border-color: var(--border-subtle);
+}
+
+.settings-item.active {
+  background: var(--accent-soft, rgba(255, 102, 0, 0.10));
+  border-color: rgba(255, 102, 0, 0.30);
+}
+
+.settings-item .label {
+  display: block;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.settings-item .blurb {
+  display: block;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin-top: 2px;
+}
+
+@media (max-width: 768px) {
+  .settings-side {
+    padding: 12px 10px 20px;
+  }
+}

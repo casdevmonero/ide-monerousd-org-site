@@ -726,27 +726,91 @@
 @media (max-width: 768px) {
   /* Top bar gets a compact pad; brand mark drops to icon only. */
   .topbar {
-    padding: 0 12px;
+    padding: 0 10px;
     gap: 8px;
   }
   .topbar-brand span:not(.brand-mark) { display: none; }
   .topbar-project { display: none; }
   .network-pill { display: none; }
 
-  /* Stack the layout: top bar / content / bottom tabs / status bar. */
+  /* The Connect button compresses on mobile — full label is too wide
+     for a 375 px viewport once the brand icon eats 32 px and a 14 px
+     padding eats the rest. We hide the verbose label but keep the
+     pill shape + the action target. */
+  .btn-connect {
+    padding: 6px 14px;
+    font-size: var(--fs-xs);
+    max-width: 160px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Mobile layout — stack vertically: top bar / content / bottom tabs /
+     status bar. (Terminal slot is inserted between editor + activity
+     when [data-terminal-open="true"].)
+
+     SPECIFICITY NOTE: the desktop block above writes a four-attribute
+     selector `#app[data-side-collapsed="true"][data-plugin-collapsed="true"]`
+     with specificity (0,1,2,0). The 1024 px media query writes
+     `#app[data-terminal-open="true"]` at (0,1,1,0). To override BOTH
+     unconditionally on mobile we have to match (0,1,2,0) AT LEAST on
+     every relevant attribute combination — otherwise the desktop rule
+     wins for grids where side+plugin happen to both be collapsed (which
+     the JS auto-collapse sets on narrow viewports), and the implicit-
+     grid-track fallout creates a phantom horizontal layout exactly when
+     the user has the LEAST screen room. The selector list below names
+     every (side, plugin, terminal) tuple at (0,1,2,0)–(0,1,3,0) so the
+     cascade can't drop us back into the desktop tracks. */
   #app,
   #app[data-side-collapsed="true"],
+  #app[data-side-collapsed="false"],
   #app[data-plugin-collapsed="true"],
-  #app[data-side-collapsed="true"][data-plugin-collapsed="true"] {
-    grid-template-rows: 52px 1fr 60px 28px;
+  #app[data-plugin-collapsed="false"],
+  #app[data-terminal-open="true"],
+  #app[data-terminal-open="false"],
+  #app[data-side-collapsed="true"][data-plugin-collapsed="true"],
+  #app[data-side-collapsed="true"][data-plugin-collapsed="false"],
+  #app[data-side-collapsed="false"][data-plugin-collapsed="true"],
+  #app[data-side-collapsed="false"][data-plugin-collapsed="false"],
+  #app[data-side-collapsed="true"][data-terminal-open="true"],
+  #app[data-side-collapsed="false"][data-terminal-open="true"],
+  #app[data-plugin-collapsed="true"][data-terminal-open="true"],
+  #app[data-plugin-collapsed="false"][data-terminal-open="true"],
+  #app[data-side-collapsed="true"][data-plugin-collapsed="true"][data-terminal-open="true"],
+  #app[data-side-collapsed="true"][data-plugin-collapsed="false"][data-terminal-open="true"],
+  #app[data-side-collapsed="false"][data-plugin-collapsed="true"][data-terminal-open="true"],
+  #app[data-side-collapsed="false"][data-plugin-collapsed="false"][data-terminal-open="true"] {
     grid-template-columns: 1fr;
+  }
+  #app,
+  #app[data-side-collapsed="true"],
+  #app[data-side-collapsed="false"],
+  #app[data-plugin-collapsed="true"],
+  #app[data-plugin-collapsed="false"],
+  #app[data-side-collapsed="true"][data-plugin-collapsed="true"],
+  #app[data-side-collapsed="true"][data-plugin-collapsed="false"],
+  #app[data-side-collapsed="false"][data-plugin-collapsed="true"],
+  #app[data-side-collapsed="false"][data-plugin-collapsed="false"] {
+    grid-template-rows: 52px 1fr 60px 28px;
     grid-template-areas:
       "topbar"
       "editor"
       "activity"
       "statusbar";
   }
-  #app[data-terminal-open="true"] {
+  /* When the terminal is open, insert it between editor + activity.
+     Every (side, plugin) combination needs to win the cascade — see
+     specificity note above. */
+  #app[data-terminal-open="true"],
+  #app[data-side-collapsed="true"][data-terminal-open="true"],
+  #app[data-side-collapsed="false"][data-terminal-open="true"],
+  #app[data-plugin-collapsed="true"][data-terminal-open="true"],
+  #app[data-plugin-collapsed="false"][data-terminal-open="true"],
+  #app[data-side-collapsed="true"][data-plugin-collapsed="true"][data-terminal-open="true"],
+  #app[data-side-collapsed="true"][data-plugin-collapsed="false"][data-terminal-open="true"],
+  #app[data-side-collapsed="false"][data-plugin-collapsed="true"][data-terminal-open="true"],
+  #app[data-side-collapsed="false"][data-plugin-collapsed="false"][data-terminal-open="true"] {
     grid-template-rows: 52px 1fr 200px 60px 28px;
     grid-template-areas:
       "topbar"
@@ -819,13 +883,28 @@
    * the editor's empty state or the terminal's tabs instead. */
   .plugin { display: none !important; }
 
-  /* Status bar trims to essentials on phones. */
+  /* Status bar trims to essentials on phones — only the connection
+     pill + network label survive. Cursor, sync state, version are
+     all desktop-only signals (touch keyboards don't have a cursor;
+     the sync state is on the IndexedDB-ready label which is the
+     same for 99% of the session). */
   .statusbar {
     padding: 0 12px;
-    gap: 8px;
+    gap: 10px;
     font-size: 10px;
+    overflow: hidden;
+    white-space: nowrap;
   }
-  .statusbar .status-mobile-hide { display: none !important; }
+  .statusbar .status-item {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .statusbar #status-file,
+  .statusbar #status-cursor,
+  .statusbar #status-sync,
+  .statusbar .status-mobile-hide {
+    display: none !important;
+  }
 }
 
 /* Touch hover suppression — on touch devices, the :hover state is sticky
